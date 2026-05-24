@@ -1,8 +1,6 @@
 #include "network/websocket_client.hpp"
-
 #include <iostream>
 #include <boost/asio/io_context.hpp>
-#include <boost/asio/connect.hpp>
 #include <boost/asio/ip/tcp.hpp>
 #include <boost/beast/websocket/stream.hpp>
 #include <boost/beast/core/buffers_to_string.hpp>
@@ -27,8 +25,7 @@ void Binance::WebSocketClient::Connect()
 				return;
 			}
 
-			Net::async_connect(
-				self->WebSocket.next_layer(),
+			Beast::get_lowest_layer(self->WebSocket).async_connect(
 				results,
 				[self](
 					boost::system::error_code ec,
@@ -43,10 +40,9 @@ void Binance::WebSocketClient::Connect()
 
 						return;
 					}
-					
-					self->WebSocket.async_handshake(
-						self->Host,
-						"/ws/btcusdt@trade",
+
+					self->WebSocket.next_layer().async_handshake(
+						Net::ssl::stream_base::client,
 						[self](
 							boost::system::error_code ec
 							)
@@ -54,15 +50,34 @@ void Binance::WebSocketClient::Connect()
 							if (ec)
 							{
 								self->CurrentStatus = ConnectionStatus::Error;
-								std::cout << "Handshake error: " << ec.message() << "\n";
+								std::cout << "SSL Handshake error: " << ec.message() << "\n";
 
 								return;
 							}
 
-							self->CurrentStatus = ConnectionStatus::Connected;
-							std::cout << "Connection completed!" << "\n";
+							Beast::get_lowest_layer(self->WebSocket).expires_never();
 
-							self->ReadMessage();
+							self->WebSocket.async_handshake(
+								self->Host,
+								"/ws/btcusdt@trade",
+								[self](
+									boost::system::error_code ec
+									)
+								{
+									if (ec)
+									{
+										self->CurrentStatus = ConnectionStatus::Error;
+										std::cout << "Handshake error: " << ec.message() << "\n";
+
+										return;
+									}
+
+									self->CurrentStatus = ConnectionStatus::Connected;
+									std::cout << "Connection completed!" << "\n";
+
+									self->ReadMessage();
+								}
+							);
 						}
 					);
 				}
@@ -122,5 +137,5 @@ void Binance::WebSocketClient::Close()
 
 Binance::ConnectionStatus Binance::WebSocketClient::GetStatus() const
 {
-	
+	return CurrentStatus;
 }

@@ -1,12 +1,13 @@
-#ifndef WEBSOCKET_CLIENT.HPP
-#define WEBSOCKET_CLIENT.HPP
+#pragma once
 
 #include <string>
-#include <cstdint>
 #include <memory>
 #include <boost/asio/io_context.hpp>
 #include <boost/asio/ip/tcp.hpp>
+#include <boost/beast/ssl.hpp>
 #include <boost/beast/websocket/stream.hpp>
+#include <boost/beast/core/tcp_stream.hpp>
+#include <boost/beast/core.hpp>
 
 namespace Beast = boost::beast;                  // from <boost/beast.hpp>
 namespace Http = Beast::http;                   // from <boost/beast/http.hpp>
@@ -37,12 +38,13 @@ namespace Binance
 		[[nodiscard]]
 		ConnectionStatus GetStatus() const;
 
-		explicit WebSocketClient(std::string host, std::string port, Net::io_context& ioContext)
+		explicit WebSocketClient(std::string host, std::string port, Net::io_context& ioContext, Net::ssl::context& sslContext)
 			: Host(std::move(host)),
 			  Port(std::move(port)),
 			  IoContext(ioContext),
-			  Resolver(ioContext),
-			  WebSocket(ioContext)
+			  SslContext(sslContext),
+		      Resolver(ioContext),
+			  WebSocket(ioContext, sslContext)
 		{
 		}
 
@@ -50,9 +52,10 @@ namespace Binance
 		std::string Host;
 		std::string Port;
 		Net::io_context& IoContext;
+		Net::ssl::context& SslContext;
 		Tcp::resolver Resolver;
 		Beast::flat_buffer Buffer;
-		WebSocket::stream<boost::asio::ip::tcp::socket> WebSocket;
+		WebSocket::stream<Beast::ssl_stream<Beast::tcp_stream>> WebSocket;
 
 		void OnResolve();
 		void OnConnect();
@@ -62,5 +65,3 @@ namespace Binance
 		ConnectionStatus CurrentStatus = ConnectionStatus::Disconnected;
 	};
 }
-
-#endif
