@@ -5,6 +5,7 @@
 #include <boost/asio/connect.hpp>
 #include <boost/asio/ip/tcp.hpp>
 #include <boost/beast/websocket/stream.hpp>
+#include <boost/beast/core/buffers_to_string.hpp>
 
 void Binance::WebSocketClient::Connect()
 {
@@ -31,7 +32,8 @@ void Binance::WebSocketClient::Connect()
 				results,
 				[self](
 					boost::system::error_code ec,
-					const Tcp::endpoint&
+					[[maybe_unused]]
+					const Tcp::endpoint& endpoint
 					)
 				{
 					if (ec)
@@ -71,7 +73,30 @@ void Binance::WebSocketClient::Connect()
 
 void Binance::WebSocketClient::ReadMessage()
 {
-	
+	WebSocket.async_read(
+		Buffer,
+		[self = shared_from_this()](
+			boost::system::error_code ec,
+			[[maybe_unused]]
+			std::size_t bytesTransferred
+		)
+		{
+			if (ec)
+			{
+				std::cout << "Reading error: " << ec.message() << "\n";
+
+				return;
+			}
+
+			std::string const message = Beast::buffers_to_string(self->Buffer.data());
+
+			self->Buffer.consume(self->Buffer.size());
+
+			std::cout << message << "\n";
+
+			self->ReadMessage();
+		}
+	);
 }
 
 void Binance::WebSocketClient::Close()
