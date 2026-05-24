@@ -79,7 +79,7 @@ void Binance::WebSocketClient::ReadMessage()
 			boost::system::error_code ec,
 			[[maybe_unused]]
 			std::size_t bytesTransferred
-		)
+			)
 		{
 			if (ec)
 			{
@@ -101,7 +101,23 @@ void Binance::WebSocketClient::ReadMessage()
 
 void Binance::WebSocketClient::Close()
 {
-	
+	WebSocket.async_close(
+		WebSocket::close_code::normal,
+		[self = shared_from_this()](
+			boost::system::error_code ec
+			)
+		{
+			if (ec)
+			{
+				std::cout << "Close error: " << ec.message() << "\n";
+
+				return;
+			}
+
+			self->CurrentStatus = ConnectionStatus::Closed;
+			std::cout << "Connection closed!" << "\n";
+		}
+	);
 }
 
 Binance::ConnectionStatus Binance::WebSocketClient::GetStatus() const
