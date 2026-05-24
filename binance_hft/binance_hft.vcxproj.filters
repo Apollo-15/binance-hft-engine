@@ -13,18 +13,28 @@
     <Filter Include="src">
       <UniqueIdentifier>{ea8d6093-8e24-4a5b-9a63-f4f9658fc718}</UniqueIdentifier>
     </Filter>
+    <Filter Include="include\network">
+      <UniqueIdentifier>{da25f2a4-c237-4642-8acb-9a5bf11918f9}</UniqueIdentifier>
+    </Filter>
   </ItemGroup>
   <ItemGroup>
-    <ClInclude Include="include\network\websocket_client.hpp">
-      <Filter>include</Filter>
-    </ClInclude>
     <ClInclude Include="include\network\orderbook.hpp">
       <Filter>include</Filter>
+    </ClInclude>
+    <ClInclude Include="include\network\websocket_client.hpp">
+      <Filter>include\network</Filter>
     </ClInclude>
   </ItemGroup>
   <ItemGroup>
     <ClCompile Include="src\main.cpp">
       <Filter>src</Filter>
     </ClCompile>
+    <ClCompile Include="src\network\websocket_client.cpp">
+      <Filter>network</Filter>
+    </ClCompile>
+  </ItemGroup>
+  <ItemGroup>
+    <None Include="..\.gitignore" />
+    <None Include="..\README.md" />
   </ItemGroup>
 </Project>
