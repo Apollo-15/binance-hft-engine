@@ -2,6 +2,7 @@
 
 #include <string>
 #include <memory>
+#include <atomic>
 #include <boost/asio/io_context.hpp>
 #include <boost/asio/ip/tcp.hpp>
 #include <boost/beast/ssl.hpp>
@@ -62,6 +63,6 @@ namespace Binance
 		void OnHandshake();
 		void OnRead();
 
-		ConnectionStatus CurrentStatus = ConnectionStatus::Disconnected;
+		std::atomic<ConnectionStatus> CurrentStatus { ConnectionStatus::Disconnected };
 	};
 }
