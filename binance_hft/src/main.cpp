@@ -36,10 +36,14 @@ int main()
 		    if (queue.Pop(event))
 		    {
                 const auto newBalance = portfolio.GetBalance() - event.Price * event.Quantity;
-                portfolio.UpdateBalance(newBalance);
 
-                const auto newPosition = portfolio.GetPosition() + event.Quantity;
-                portfolio.UpdatePosition(newPosition);
+                if (newBalance > 0)
+                {
+	                portfolio.UpdateBalance(newBalance);
+
+	                const auto newPosition = portfolio.GetPosition() + event.Quantity;
+	                portfolio.UpdatePosition(newPosition);
+                }
 		    }
             else
             {
