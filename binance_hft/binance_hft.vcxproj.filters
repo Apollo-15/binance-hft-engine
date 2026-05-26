@@ -1,9 +1,6 @@
 ﻿<?xml version="1.0" encoding="utf-8"?>
 <Project ToolsVersion="4.0" xmlns="http://schemas.microsoft.com/developer/msbuild/2003">
   <ItemGroup>
-    <Filter Include="network">
-      <UniqueIdentifier>{9e978209-9c09-406d-834d-97f7046504c0}</UniqueIdentifier>
-    </Filter>
     <Filter Include="include">
       <UniqueIdentifier>{0198dd85-3e90-4c00-a62a-21f9fabcbb13}</UniqueIdentifier>
     </Filter>
@@ -16,6 +13,30 @@
     <Filter Include="include\network">
       <UniqueIdentifier>{da25f2a4-c237-4642-8acb-9a5bf11918f9}</UniqueIdentifier>
     </Filter>
+    <Filter Include="include\parser">
+      <UniqueIdentifier>{99126de9-784f-4d6a-892f-1bfbcc7a7fe6}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="src\network">
+      <UniqueIdentifier>{9e978209-9c09-406d-834d-97f7046504c0}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="src\parser">
+      <UniqueIdentifier>{b4d74ade-1b51-494b-b454-5a99f95cc940}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="include\modules">
+      <UniqueIdentifier>{85e881fc-8f73-4a00-80a7-d969aac7d94f}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="third_party">
+      <UniqueIdentifier>{d81b38dd-6fac-411d-b46e-281ce09da4ba}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="third_party\simdjson">
+      <UniqueIdentifier>{373bb728-a9ac-4560-8f50-7a1b18419cbb}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="third_party\simdjson\include">
+      <UniqueIdentifier>{25ea68c0-6a68-47be-977d-ef7af64e573e}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="third_party\simdjson\src">
+      <UniqueIdentifier>{4e53d6cd-8664-49a9-8d72-a0f82bfb76d2}</UniqueIdentifier>
+    </Filter>
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="include\network\orderbook.hpp">
@@ -24,13 +45,28 @@
     <ClInclude Include="include\network\websocket_client.hpp">
       <Filter>include\network</Filter>
     </ClInclude>
+    <ClInclude Include="include\parser\trade_parser.hpp">
+      <Filter>include\parser</Filter>
+    </ClInclude>
+    <ClInclude Include="include\models\trade_event.hpp">
+      <Filter>include\modules</Filter>
+    </ClInclude>
+    <ClInclude Include="third_party\simdjson\include\simdjson.h">
+      <Filter>third_party\simdjson\include</Filter>
+    </ClInclude>
   </ItemGroup>
   <ItemGroup>
     <ClCompile Include="src\main.cpp">
       <Filter>src</Filter>
     </ClCompile>
     <ClCompile Include="src\network\websocket_client.cpp">
-      <Filter>network</Filter>
+      <Filter>src\network</Filter>
+    </ClCompile>
+    <ClCompile Include="src\parser\trade_parser.cpp">
+      <Filter>src\parser</Filter>
+    </ClCompile>
+    <ClCompile Include="third_party\simdjson\src\simdjson.cpp">
+      <Filter>third_party\simdjson\src</Filter>
     </ClCompile>
   </ItemGroup>
   <ItemGroup>

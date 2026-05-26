@@ -4,6 +4,10 @@
 #include <boost/asio/ip/tcp.hpp>
 #include <boost/beast/websocket/stream.hpp>
 #include <boost/beast/core/buffers_to_string.hpp>
+#include <iomanip>
+#include <ctime>
+
+#include "parser/trade_parser.hpp"
 
 void Binance::WebSocketClient::Connect()
 {
@@ -107,7 +111,22 @@ void Binance::WebSocketClient::ReadMessage()
 
 			self->Buffer.consume(self->Buffer.size());
 
-			std::cout << message << "\n";
+			auto parsedData = JsonParser::Parse(message);
+
+			if (parsedData)
+			{
+				std::time_t time = parsedData->TradeTime / 1000;
+				std::tm localTime;
+
+				localtime_s(&localTime, &time);
+
+				std::cout << "Trade ID: " << parsedData->TradeId
+						  << " |Symbol: " << parsedData->Symbol 
+						  << " | Price: " << parsedData->Price
+				          << " | Quantity: " << std::fixed << std::setprecision(8) <<parsedData->Quantity 
+						  << " | Time: " << std::put_time(&localTime, "%H:%M:%S")
+				          << "\n";
+			}
 
 			self->ReadMessage();
 		}
