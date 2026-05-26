@@ -42,13 +42,15 @@ namespace Binance
 		[[nodiscard]]
 		ConnectionStatus GetStatus() const;
 
-		explicit WebSocketClient(std::string host, std::string port, Net::io_context& ioContext, Net::ssl::context& sslContext)
+		explicit WebSocketClient(std::string host, std::string port, Net::io_context& ioContext, Net::ssl::context& sslContext,
+			TradeQueue<TradeEvent>& event)
 			: Host(std::move(host)),
 			  Port(std::move(port)),
 			  IoContext(ioContext),
 			  SslContext(sslContext),
-		      Resolver(ioContext),
-			  WebSocket(ioContext, sslContext)
+			  Resolver(ioContext),
+			  WebSocket(ioContext, sslContext),
+			  Event(event)
 		{
 		}
 
@@ -61,13 +63,8 @@ namespace Binance
 		Beast::flat_buffer Buffer;
 		WebSocket::stream<Beast::ssl_stream<Beast::tcp_stream>> WebSocket;
 
-		void OnResolve();
-		void OnConnect();
-		void OnHandshake();
-		void OnRead();
-
 		std::atomic<ConnectionStatus> CurrentStatus { ConnectionStatus::Disconnected };
 
-		TradeQueue<TradeEvent> Event;
+		TradeQueue<TradeEvent>& Event;
 	};
 }

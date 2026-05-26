@@ -143,6 +143,7 @@
     <ClInclude Include="include\network\orderbook.hpp" />
     <ClInclude Include="include\network\websocket_client.hpp" />
     <ClInclude Include="include\parser\trade_parser.hpp" />
+    <ClInclude Include="include\portfolio\portfolio.hpp" />
     <ClInclude Include="include\threading\trade_queue.hpp" />
     <ClInclude Include="third_party\simdjson\include\simdjson.h" />
   </ItemGroup>
