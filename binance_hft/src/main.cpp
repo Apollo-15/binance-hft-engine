@@ -14,7 +14,14 @@ int main()
 
     client->Connect();
 
-    ioContext.run();
+
+    std::thread ioThread([](boost::asio::io_context& ioContext)
+    {
+		ioContext.run();
+	    
+    }, std::ref(ioContext));
+
+    ioThread.join();
 
     return 0;
 }
