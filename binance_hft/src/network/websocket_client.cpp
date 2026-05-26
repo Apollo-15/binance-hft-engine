@@ -123,9 +123,11 @@ void Binance::WebSocketClient::ReadMessage()
 				std::cout << "Trade ID: " << parsedData->TradeId
 						  << " |Symbol: " << parsedData->Symbol 
 						  << " | Price: " << parsedData->Price
-				          << " | Quantity: " << std::fixed << std::setprecision(8) <<parsedData->Quantity 
+				          << " | Quantity: " << std::fixed << std::setprecision(8) << parsedData->Quantity 
 						  << " | Time: " << std::put_time(&localTime, "%H:%M:%S")
 				          << "\n";
+
+				self->Event.Push(parsedData.value());
 			}
 
 			self->ReadMessage();
