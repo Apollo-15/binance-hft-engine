@@ -1,5 +1,6 @@
 #pragma once
 #include <vector>
+#include <optional>
 #include "models/trade_batch.hpp"
 
 class TradingStrategy
@@ -10,6 +11,7 @@ private:
 	void BatchCreator(const TradeEvent& event);
 
 public:
-	void ProcessTrades(const TradeEvent& event);
-	bool ShouldSell(double currentPrice);
+	bool ProcessTrades(const TradeEvent& event);
+	std::optional<TradeBatch> ShouldSell(double currentPrice);
+	TradeBatch& GetBack();
 };

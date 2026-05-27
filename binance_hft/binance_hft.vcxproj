@@ -133,6 +133,7 @@
     </Link>
   </ItemDefinitionGroup>
   <ItemGroup>
+    <ClCompile Include="src\database\database.cpp" />
     <ClCompile Include="src\main.cpp" />
     <ClCompile Include="src\network\websocket_client.cpp" />
     <ClCompile Include="src\parser\trade_parser.cpp" />
@@ -140,6 +141,7 @@
     <ClCompile Include="third_party\simdjson\src\simdjson.cpp" />
   </ItemGroup>
   <ItemGroup>
+    <ClInclude Include="include\database\database.hpp" />
     <ClInclude Include="include\models\trade_batch.hpp" />
     <ClInclude Include="include\models\trade_event.hpp" />
     <ClInclude Include="include\network\orderbook.hpp" />
