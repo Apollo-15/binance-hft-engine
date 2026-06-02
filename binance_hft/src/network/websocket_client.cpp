@@ -1,4 +1,6 @@
 #include "network/websocket_client.hpp"
+#include "network/reconnect_manager.hpp"
+
 #include <iostream>
 #include <boost/asio/io_context.hpp>
 #include <boost/asio/ip/tcp.hpp>
@@ -25,10 +27,19 @@ void Binance::WebSocketClient::Connect()
 				self->CurrentStatus = ConnectionStatus::Error;
 				std::cout << "Resolve error: " << ec.message() << "\n";
 
+				auto lockedManager = self->Manager.lock();
+
+				if (lockedManager == nullptr)
+				{
+					return;
+				}
+
+				lockedManager->StartReconnect();
+
 				return;
 			}
 
-			Beast::get_lowest_layer(self->WebSocket).async_connect(
+			Beast::get_lowest_layer(*self->WebSocket).async_connect(
 				results,
 				[self](
 					boost::system::error_code ec,
@@ -41,10 +52,19 @@ void Binance::WebSocketClient::Connect()
 						self->CurrentStatus = ConnectionStatus::Error;
 						std::cout << "Connection error: " << ec.message() << "\n";
 
+						auto lockedManager = self->Manager.lock();
+
+						if (lockedManager == nullptr)
+						{
+							return;
+						}
+
+						lockedManager->StartReconnect();
+
 						return;
 					}
 
-					self->WebSocket.next_layer().async_handshake(
+					self->WebSocket->next_layer().async_handshake(
 						Net::ssl::stream_base::client,
 						[self](
 							boost::system::error_code ec
@@ -55,12 +75,21 @@ void Binance::WebSocketClient::Connect()
 								self->CurrentStatus = ConnectionStatus::Error;
 								std::cout << "SSL Handshake error: " << ec.message() << "\n";
 
+								auto lockedManager = self->Manager.lock();
+
+								if (lockedManager == nullptr)
+								{
+									return;
+								}
+
+								lockedManager->StartReconnect();
+
 								return;
 							}
 
-							Beast::get_lowest_layer(self->WebSocket).expires_never();
+							Beast::get_lowest_layer(*self->WebSocket).expires_never();
 
-							self->WebSocket.async_handshake(
+							self->WebSocket->async_handshake(
 								self->Host,
 								"/ws/btcusdt@trade",
 								[self](
@@ -71,6 +100,15 @@ void Binance::WebSocketClient::Connect()
 									{
 										self->CurrentStatus = ConnectionStatus::Error;
 										std::cout << "Handshake error: " << ec.message() << "\n";
+
+										auto lockedManager = self->Manager.lock();
+
+										if (lockedManager == nullptr)
+										{
+											return;
+										}
+
+										lockedManager->StartReconnect();
 
 										return;
 									}
@@ -91,7 +129,7 @@ void Binance::WebSocketClient::Connect()
 
 void Binance::WebSocketClient::ReadMessage()
 {
-	WebSocket.async_read(
+	WebSocket->async_read(
 		Buffer,
 		[self = shared_from_this()](
 			boost::system::error_code ec,
@@ -102,6 +140,15 @@ void Binance::WebSocketClient::ReadMessage()
 			if (ec)
 			{
 				std::cout << "Reading error: " << ec.message() << "\n";
+
+				auto lockedManager = self->Manager.lock();
+
+				if (lockedManager == nullptr)
+				{
+					return;
+				}
+
+				lockedManager->StartReconnect();
 
 				return;
 			}
@@ -136,7 +183,7 @@ void Binance::WebSocketClient::ReadMessage()
 
 void Binance::WebSocketClient::Close()
 {
-	WebSocket.async_close(
+	WebSocket->async_close(
 		WebSocket::close_code::normal,
 		[self = shared_from_this()](
 			boost::system::error_code ec
@@ -155,7 +202,17 @@ void Binance::WebSocketClient::Close()
 	);
 }
 
+void Binance::WebSocketClient::Reset()
+{
+	WebSocket = std::make_unique<WebSocket::stream<Beast::ssl_stream<Beast::tcp_stream>>>(IoContext, SslContext);
+}
+
 Binance::ConnectionStatus Binance::WebSocketClient::GetStatus() const
 {
 	return CurrentStatus;
+}
+
+void Binance::WebSocketClient::SetManager(const std::weak_ptr<ReconnectManager>& manager)
+{
+	Manager = manager;
 }

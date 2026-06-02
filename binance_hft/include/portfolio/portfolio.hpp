@@ -28,7 +28,6 @@ public:
 	Portfolio& operator=(const Portfolio&) = delete;
 	Portfolio& operator=(Portfolio&&) = delete;
 
-
 	[[nodiscard]]
 	double GetBalance() const
 	{
@@ -50,7 +49,6 @@ public:
 
 		return Position;
 	}
-
 
 	void UpdateBalance(const double balance)
 	{

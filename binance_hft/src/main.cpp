@@ -1,10 +1,27 @@
+#include <csignal>
+#include <memory>
+
+#include "config/binance_config.hpp"
 #include "network/websocket_client.hpp"
+#include "network/reconnect_manager.hpp"
 #include "portfolio/portfolio.hpp"
 #include "strategy/trading_strategy.hpp"
 #include "database/database.hpp"
 
+boost::asio::executor_work_guard<boost::asio::io_context::executor_type>* workGuard;
+
+void SignalHandler(int signal)
+{
+    if (workGuard != nullptr)
+    {
+        workGuard->reset();
+    }
+}
+
 int main()
 {
+    void(std::signal(SIGINT, SignalHandler));
+
     Net::io_context ioContext;
     Net::ssl::context sslContext{ Net::ssl::context::tlsv12_client };
     TradeQueue<TradeEvent> queue;
@@ -12,15 +29,25 @@ int main()
     TradeQueue<TradeBatch> dbBatchQueue;
 	std::atomic<bool> bIsRunning = true;
     DataBase db;
-
-    auto client = std::make_shared<Binance::WebSocketClient>(
+    Binance::BinanceConfig binanceConfig{
         "stream.binance.com",
         "9443",
+        std::chrono::seconds(16),
+        std::chrono::seconds(1),
+        std::chrono::seconds(5)
+    };
+
+    auto client = std::make_shared<Binance::WebSocketClient>(
+        binanceConfig.Host,
+        binanceConfig.Port,
         ioContext,
         sslContext,
         queue
         );
 
+    auto reconnectManager = std::make_shared<Binance::ReconnectManager>(client, ioContext, binanceConfig);
+
+    client->SetManager(reconnectManager);
     client->Connect();
 
     db.OpenConnection("portfolio.db");
@@ -28,10 +55,15 @@ int main()
     db.CreateBatchesTable();
     db.CreateTradesTable();
 
-    std::thread ioThread([](boost::asio::io_context& ioContext)
+    auto localGuard = Net::make_work_guard(ioContext);
+
+    workGuard = &localGuard;
+
+    std::thread ioThread([](Net::io_context& ioContext)
     {
 		ioContext.run();
     }, std::ref(ioContext));
+
 
     std::thread portfolioThread([](TradeQueue<TradeEvent>& queue, std::atomic<bool>& bIsRunning, 
         TradeQueue<TradeEvent>& dbTradeQueue, TradeQueue<TradeBatch>& dbBatchQueue)
@@ -73,7 +105,7 @@ int main()
                         savedBatch->PnL = (finalBalance - newBalance) / newBalance * 100;
                         savedBatch->BatchId = batchCounter++;
 
-                        dbBatchQueue.Push(std::move(*savedBatch));
+                        dbBatchQueue.Push(*savedBatch);
 	                }
                     dbTradeQueue.Push(event);
                 }
