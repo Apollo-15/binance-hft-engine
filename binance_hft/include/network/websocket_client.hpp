@@ -21,6 +21,8 @@ using Tcp = boost::asio::ip::tcp;            // from <boost/asio/ip/tcp.hpp>
 
 namespace Binance
 {
+	class ReconnectManager;
+
 	enum class ConnectionStatus 
 		: std::uint8_t
 	{
@@ -28,19 +30,38 @@ namespace Binance
 		Connecting,
 		Connected,
 		Closed,
-		Error
+		Error,
+		Reconnecting
 	};
 
 	class WebSocketClient 
 		: public std::enable_shared_from_this<WebSocketClient>
 	{
+	private:
+		std::string Host;
+		std::string Port;
+		Net::io_context& IoContext;
+		Net::ssl::context& SslContext;
+		Tcp::resolver Resolver;
+		Beast::flat_buffer Buffer;
+		std::unique_ptr<WebSocket::stream<Beast::ssl_stream<Beast::tcp_stream>>> WebSocket;
+
+		std::atomic<ConnectionStatus> CurrentStatus{ ConnectionStatus::Disconnected };
+
+		TradeQueue<TradeEvent>& Event;
+
+		std::weak_ptr<ReconnectManager> Manager;
+
 	public:
 		void Connect();
 		void Close();
 		void ReadMessage();
+		void Reset();
 
 		[[nodiscard]]
 		ConnectionStatus GetStatus() const;
+
+		void SetManager(const std::weak_ptr<ReconnectManager>& manager);
 
 		explicit WebSocketClient(std::string host, std::string port, Net::io_context& ioContext, Net::ssl::context& sslContext,
 			TradeQueue<TradeEvent>& event)
@@ -49,22 +70,9 @@ namespace Binance
 			  IoContext(ioContext),
 			  SslContext(sslContext),
 			  Resolver(ioContext),
-			  WebSocket(ioContext, sslContext),
+			  WebSocket(std::make_unique<WebSocket::stream<Beast::ssl_stream<Beast::tcp_stream>>>(ioContext, sslContext)),
 			  Event(event)
 		{
 		}
-
-	private:
-		std::string Host;
-		std::string Port;
-		Net::io_context& IoContext;
-		Net::ssl::context& SslContext;
-		Tcp::resolver Resolver;
-		Beast::flat_buffer Buffer;
-		WebSocket::stream<Beast::ssl_stream<Beast::tcp_stream>> WebSocket;
-
-		std::atomic<ConnectionStatus> CurrentStatus { ConnectionStatus::Disconnected };
-
-		TradeQueue<TradeEvent>& Event;
 	};
 }
