@@ -7,7 +7,7 @@
 
 void DashBoard::TuiStarter()
 {
-	std::vector<std::string> tabNames
+	const std::vector<std::string> tabNames
 	{
 		"Account",
 		"Trades",
