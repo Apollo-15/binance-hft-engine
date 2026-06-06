@@ -145,3 +145,42 @@ void DataBase::UpdatePortfolio()
 	sqlite3_step(stmt);
 	sqlite3_finalize(stmt);
 }
+
+std::vector<TradeEvent> DataBase::ReadTrades()
+{
+	std::scoped_lock<std::mutex> lock(Mutex);
+	std::vector<TradeEvent> event;
+
+	const char* sql = "SELECT * FROM trades";
+
+	sqlite3_stmt* stmt = nullptr;
+
+	sqlite3_prepare_v2(
+		Db,
+		sql,
+		-1,
+		&stmt,
+		nullptr
+	);
+
+	while (sqlite3_step(stmt) == SQLITE_ROW)
+	{
+		TradeEvent trade;
+		const auto id = sqlite3_column_int64(stmt, 1);
+		const auto symbol = sqlite3_column_text(stmt, 2);
+		const auto price = sqlite3_column_double(stmt, 3);
+		const auto quantity = sqlite3_column_double(stmt, 4);
+		const auto tradeTime = sqlite3_column_int64(stmt, 5);
+
+		trade.TradeId = id;
+		trade.Symbol = reinterpret_cast<const char*>(symbol);
+		trade.Price = price;
+		trade.Quantity = quantity;
+		trade.TradeTime = tradeTime;
+
+		event.push_back(trade);
+	}
+	sqlite3_finalize(stmt);
+
+	return event;
+}
