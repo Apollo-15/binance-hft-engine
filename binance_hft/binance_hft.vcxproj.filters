@@ -22,9 +22,6 @@
     <Filter Include="src\parser">
       <UniqueIdentifier>{b4d74ade-1b51-494b-b454-5a99f95cc940}</UniqueIdentifier>
     </Filter>
-    <Filter Include="include\modules">
-      <UniqueIdentifier>{85e881fc-8f73-4a00-80a7-d969aac7d94f}</UniqueIdentifier>
-    </Filter>
     <Filter Include="third_party">
       <UniqueIdentifier>{d81b38dd-6fac-411d-b46e-281ce09da4ba}</UniqueIdentifier>
     </Filter>
@@ -58,6 +55,18 @@
     <Filter Include="include\config">
       <UniqueIdentifier>{4c5dac92-3cec-4689-9e93-3d71c8cec53e}</UniqueIdentifier>
     </Filter>
+    <Filter Include="include\tui">
+      <UniqueIdentifier>{a905d1fb-d872-4e88-9e96-b456a897461d}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="src\tui">
+      <UniqueIdentifier>{fa8459c0-ff9e-48c1-b89d-5aa9d0810f7a}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="include\models">
+      <UniqueIdentifier>{85e881fc-8f73-4a00-80a7-d969aac7d94f}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="src\threading">
+      <UniqueIdentifier>{2d49acd9-d41e-485f-b026-7ab38d7081b0}</UniqueIdentifier>
+    </Filter>
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="include\network\orderbook.hpp">
@@ -70,7 +79,7 @@
       <Filter>include\parser</Filter>
     </ClInclude>
     <ClInclude Include="include\models\trade_event.hpp">
-      <Filter>include\modules</Filter>
+      <Filter>include\models</Filter>
     </ClInclude>
     <ClInclude Include="third_party\simdjson\include\simdjson.h">
       <Filter>third_party\simdjson\include</Filter>
@@ -79,7 +88,7 @@
       <Filter>include\threading</Filter>
     </ClInclude>
     <ClInclude Include="include\models\trade_batch.hpp">
-      <Filter>include\modules</Filter>
+      <Filter>include\models</Filter>
     </ClInclude>
     <ClInclude Include="include\strategy\trading_strategy.hpp">
       <Filter>include\strategy</Filter>
@@ -95,6 +104,18 @@
     </ClInclude>
     <ClInclude Include="include\network\reconnect_manager.hpp">
       <Filter>include\network</Filter>
+    </ClInclude>
+    <ClInclude Include="include\tui\dashboard.hpp">
+      <Filter>include\tui</Filter>
+    </ClInclude>
+    <ClInclude Include="include\threading\trade_buffer.hpp">
+      <Filter>include\threading</Filter>
+    </ClInclude>
+    <ClInclude Include="include\models\account_info.hpp">
+      <Filter>include\models</Filter>
+    </ClInclude>
+    <ClInclude Include="include\models\position.hpp">
+      <Filter>include\models</Filter>
     </ClInclude>
   </ItemGroup>
   <ItemGroup>
@@ -118,6 +139,12 @@
     </ClCompile>
     <ClCompile Include="src\network\reconnect_manager.cpp">
       <Filter>src\network</Filter>
+    </ClCompile>
+    <ClCompile Include="src\tui\dashboard.cpp">
+      <Filter>src\tui</Filter>
+    </ClCompile>
+    <ClCompile Include="src\threading\trade_buffer.cpp">
+      <Filter>src\threading</Filter>
     </ClCompile>
   </ItemGroup>
   <ItemGroup>

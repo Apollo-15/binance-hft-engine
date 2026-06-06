@@ -22,4 +22,5 @@ public:
 	void SaveTrade(const TradeEvent& trade);
 	void SaveBatch(const TradeBatch& batch);
 	void UpdatePortfolio();
+	std::vector<TradeEvent> ReadTrades();
 };

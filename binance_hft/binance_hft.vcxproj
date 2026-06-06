@@ -139,11 +139,15 @@
     <ClCompile Include="src\network\websocket_client.cpp" />
     <ClCompile Include="src\parser\trade_parser.cpp" />
     <ClCompile Include="src\strategy\trading_strategy.cpp" />
+    <ClCompile Include="src\threading\trade_buffer.cpp" />
+    <ClCompile Include="src\tui\dashboard.cpp" />
     <ClCompile Include="third_party\simdjson\src\simdjson.cpp" />
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="include\config\binance_config.hpp" />
     <ClInclude Include="include\database\database.hpp" />
+    <ClInclude Include="include\models\account_info.hpp" />
+    <ClInclude Include="include\models\position.hpp" />
     <ClInclude Include="include\models\trade_batch.hpp" />
     <ClInclude Include="include\models\trade_event.hpp" />
     <ClInclude Include="include\network\orderbook.hpp" />
@@ -152,7 +156,9 @@
     <ClInclude Include="include\parser\trade_parser.hpp" />
     <ClInclude Include="include\portfolio\portfolio.hpp" />
     <ClInclude Include="include\strategy\trading_strategy.hpp" />
+    <ClInclude Include="include\threading\trade_buffer.hpp" />
     <ClInclude Include="include\threading\trade_queue.hpp" />
+    <ClInclude Include="include\tui\dashboard.hpp" />
     <ClInclude Include="third_party\simdjson\include\simdjson.h" />
   </ItemGroup>
   <ItemGroup>
