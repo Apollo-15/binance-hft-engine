@@ -22,7 +22,6 @@ void DashBoard::TuiStarter()
 	auto accountRenderer = ftxui::Renderer([&] 
 		{
 		std::vector<ftxui::Element> elements;
-		elements.push_back(ftxui::text(AccountInfoRef.AccountName));
 		elements.push_back(ftxui::text(std::to_string(AccountInfoRef.AccountId)));
 
 		for (auto position : AccountInfoRef.Positions)
@@ -109,7 +108,6 @@ void DashBoard::TuiStarter()
 			return ftxui::vbox(ftxui::text("Logs coming soon!"));
 		}
 	);
-
 
 	auto connectionRenderer = ftxui::Renderer([&]
 		{

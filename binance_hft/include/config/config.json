@@ -1,0 +1,11 @@
+{
+	"WsHost": "stream.binance.com",
+	"WsPort": "9443",
+	"RestHost": "testnet.binance.vision",
+	"RestPort": "443",
+	"APIKey": "your-api-key",
+	"SecretKey": "your-secret-key",
+	"Cap": 16,
+	"BaseDelay": 1,
+	"JitterMax": 5
+}

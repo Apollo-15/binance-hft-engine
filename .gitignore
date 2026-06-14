@@ -361,3 +361,8 @@ MigrationBackup/
 
 # Fody - auto-generated XML schema
 FodyWeavers.xsd
+
+# config_private.json
+/binance_hft/include/config/config_private.json
+
+# 

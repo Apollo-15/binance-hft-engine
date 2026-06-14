@@ -67,6 +67,15 @@
     <Filter Include="src\threading">
       <UniqueIdentifier>{2d49acd9-d41e-485f-b026-7ab38d7081b0}</UniqueIdentifier>
     </Filter>
+    <Filter Include="include\rest">
+      <UniqueIdentifier>{eb2a0c1a-19f3-400c-bd3a-1a0849a5976c}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="src\rest">
+      <UniqueIdentifier>{32a488f6-466a-4c9d-8a55-e8e1a58a999e}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="src\config">
+      <UniqueIdentifier>{769eafef-0453-4f4f-84c0-0758559c6d86}</UniqueIdentifier>
+    </Filter>
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="include\network\orderbook.hpp">
@@ -117,6 +126,15 @@
     <ClInclude Include="include\models\position.hpp">
       <Filter>include\models</Filter>
     </ClInclude>
+    <ClInclude Include="include\rest\rest_requester.hpp">
+      <Filter>include\rest</Filter>
+    </ClInclude>
+    <ClInclude Include="include\config\config_reader.hpp">
+      <Filter>include\config</Filter>
+    </ClInclude>
+    <ClInclude Include="include\parser\account_parser.hpp">
+      <Filter>include\parser</Filter>
+    </ClInclude>
   </ItemGroup>
   <ItemGroup>
     <ClCompile Include="src\main.cpp">
@@ -146,9 +164,24 @@
     <ClCompile Include="src\threading\trade_buffer.cpp">
       <Filter>src\threading</Filter>
     </ClCompile>
+    <ClCompile Include="src\rest\rest_requester.cpp">
+      <Filter>src\rest</Filter>
+    </ClCompile>
+    <ClCompile Include="src\config\config_reader.cpp">
+      <Filter>src\config</Filter>
+    </ClCompile>
+    <ClCompile Include="src\parser\account_parser.cpp">
+      <Filter>src\parser</Filter>
+    </ClCompile>
   </ItemGroup>
   <ItemGroup>
     <None Include="..\.gitignore" />
     <None Include="..\README.md" />
+    <None Include="include\config\config_private.json">
+      <Filter>include\config</Filter>
+    </None>
+    <None Include="include\config\config.json">
+      <Filter>include\config</Filter>
+    </None>
   </ItemGroup>
 </Project>
