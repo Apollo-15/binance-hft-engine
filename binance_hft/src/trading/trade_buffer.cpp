@@ -1,4 +1,4 @@
-#include "threading/trade_buffer.hpp"
+#include "trading/trade_buffer.hpp"
 
 void TradeBuffer::AddTrade(TradeEvent event)
 {

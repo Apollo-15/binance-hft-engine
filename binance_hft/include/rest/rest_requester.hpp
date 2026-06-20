@@ -1,10 +1,13 @@
 #pragma once
+
 #include <string>
 #include <boost/asio/io_context.hpp>
 #include <boost/beast/ssl.hpp>
 #include <boost/beast/websocket/stream.hpp>
 
 #include "models/account_info.hpp"
+#include "models/full_response.hpp"
+#include "models/transaction_data.hpp"
 
 namespace Beast = boost::beast;                  // from <boost/beast.hpp>
 namespace Http = Beast::http;                   // from <boost/beast/http.hpp>
@@ -44,5 +47,6 @@ namespace Binance
 		RestRequest& operator=(RestRequest&& other) noexcept = delete;
 
 		AccountInfo FetchAccountInfo();
+		FullResponse SendTransaction(const TransactionData& data);
 	};
 }

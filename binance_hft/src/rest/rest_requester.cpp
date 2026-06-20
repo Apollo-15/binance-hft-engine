@@ -5,7 +5,7 @@
 #include <openssl/hmac.h>
 
 #include "parser/account_parser.hpp"
-
+#include "parser/full_response_parser.hpp"
 
 namespace Beast = boost::beast;                  // from <boost/beast.hpp>
 namespace Http = Beast::http;                   // from <boost/beast/http.hpp>
@@ -21,21 +21,21 @@ AccountInfo Binance::RestRequest::FetchAccountInfo()
 	).count();
 	const std::string timestamp = "timestamp=" + std::to_string(localTime);
 
-	unsigned char md[32];
+	unsigned char messageDigest[32];
 	HMAC(EVP_sha256(), SecretKey.c_str(), static_cast<int>(SecretKey.size()), 
 		reinterpret_cast<const unsigned char*>(timestamp.c_str()), timestamp.size(),
-		md, nullptr);
+		messageDigest, nullptr);
 
-	std::ostringstream mdString;
+	std::ostringstream messageDigestStream;
 
-	for (const unsigned char md1 : md)
+	for (const unsigned char messageDigests : messageDigest)
 	{
-		mdString << std::hex << std::setw(2) << std::setfill('0') << static_cast<unsigned int>(md1);
+		messageDigestStream << std::hex << std::setw(2) << std::setfill('0') << static_cast<unsigned int>(messageDigests);
 	}
 
-	const std::string specialString = "&signature=" + mdString.str();
-	std::string linkedString = timestamp + specialString;
-	std::string target = "/api/v3/account?" + linkedString;
+	const std::string signatureString = "&signature=" + messageDigestStream.str();
+	std::string requestBody = timestamp + signatureString;
+	std::string target = "/api/v3/account?" + requestBody;
 
 	Tcp::resolver resolver(IoContext);
 	Tcp::resolver::results_type type = resolver.resolve(Host, Port);
@@ -58,7 +58,6 @@ AccountInfo Binance::RestRequest::FetchAccountInfo()
 
 	Http::write(webSocket, httpRequest);
 	auto httpResponse = Http::response<Http::basic_string_body<char>>();
-
 	Http::read(webSocket, buffer, httpResponse);
 
 	httpResponse.body();
@@ -72,5 +71,104 @@ AccountInfo Binance::RestRequest::FetchAccountInfo()
 	else
 	{
 		return AccountInfo();
+	}
+}
+
+FullResponse Binance::RestRequest::SendTransaction(const TransactionData& data)
+{
+	Beast::flat_buffer buffer;
+
+	const uint64_t localTime = std::chrono::duration_cast<std::chrono::milliseconds>(
+		std::chrono::system_clock::now().time_since_epoch()
+	).count();
+	const std::string timestamp = "&timestamp=" + std::to_string(localTime);
+
+	std::ostringstream requestParamsStream;
+	requestParamsStream << "symbol=" << data.Symbol 
+						<< "&side=" << data.Side 
+						<< "&type=" << data.Type 
+						<< "&quantity=" << std::to_string(data.Quantity);
+
+	const std::string linkedString =  requestParamsStream.str() + timestamp;
+
+	unsigned char messageDigest[32];
+	HMAC(EVP_sha256(), SecretKey.c_str(), static_cast<int>(SecretKey.size()),
+		reinterpret_cast<const unsigned char*>(linkedString.c_str()), linkedString.size(),
+		messageDigest, nullptr);
+
+	std::ostringstream messageDigestStream;
+
+	for (const unsigned char messageDigests : messageDigest) 
+	{
+		messageDigestStream << std::hex << std::setw(2) << std::setfill('0') << static_cast<unsigned int>(messageDigests);
+	}
+
+	const std::string signatureString = "&signature=" + messageDigestStream.str();
+	std::string requestBody = linkedString + signatureString;
+	std::string target = "/api/v3/order";
+
+
+	Tcp::resolver resolver(IoContext);
+	Tcp::resolver::results_type type = resolver.resolve(Host, Port);
+
+	auto webSocket = Net::ssl::stream<Beast::tcp_stream>(IoContext, SslContext);
+
+	if (!SSL_set_tlsext_host_name(webSocket.native_handle(), Host.c_str()))
+	{
+		throw Beast::system_error(
+			static_cast<int>(::ERR_get_error()),
+			Net::error::get_ssl_category());
+	}
+
+	Beast::get_lowest_layer(webSocket).connect(type);
+	webSocket.handshake(Net::ssl::stream_base::client);
+	auto httpRequest = Http::request<Http::string_body>(Http::verb::post, target, 11);
+	httpRequest.set("X-MBX-APIKEY", ApiKey);
+	httpRequest.set(Http::field::host, Host);
+	httpRequest.set(Http::field::content_type, "application/x-www-form-urlencoded");
+	httpRequest.keep_alive(false);
+	httpRequest.body() = requestBody;
+	httpRequest.prepare_payload();
+
+	Http::write(webSocket, httpRequest);
+	auto httpResponse = Http::response<Http::basic_string_body<char>>();
+	Http::read(webSocket, buffer, httpResponse);
+	//std::cout << httpResponse.body() << '\n';
+
+	std::optional <FullResponse> info = JsonParser::ParseFullResponse(httpResponse.body());
+
+	if (info.has_value())
+	{
+		/*std::cout << "Symbol: " << info->Symbol
+			<< " | OrderId: " << info->OrderId
+			<< " | OrderListId: " << info->OrderListId
+			<< " | ClientOrderId: " << info->ClientOrderId
+			<< " | TransactionTime: " << info->TransactionTime
+			<< " | Price: " << info->Price
+			<< " | OriginalQuantity: " << info->OriginalQuantity
+			<< " | ExecutedQuantity: " << info->ExecutedQuantity
+			<< " | OriginalQuoteOrderQuantity: " << info->OriginalQuoteOrderQuantity
+			<< " | CumulativeQuoteQuantity: " << info->CumulativeQuoteQuantity
+			<< " | Status: " << info->Status
+			<< " | TimeInForce: " << info->TimeInForce
+			<< " | Type: " << info->Type
+			<< " | Side: " << info->Side
+			<< " | WorkingTime: " << info->WorkingTime
+			<< " | SelfTradePreventionMode: " << info->SelfTradePreventionMode << '\n';
+
+		for (auto fill : info->Fills)
+		{
+			std::cout << "Price: " << fill.Price
+				<< " | Quantity: " << fill.Quantity
+				<< " | Commission: " << fill.Commission
+				<< " | CommissionAsset: " << fill.CommissionAsset
+				<< " | TradeId: " << fill.TradeId << '\n';
+		}*/
+
+		return info.value();
+	}
+	else
+	{
+		return FullResponse();
 	}
 }

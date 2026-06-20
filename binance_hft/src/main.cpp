@@ -34,6 +34,12 @@ int main()
     TradeQueue<TradeBatch> dbBatchQueue;
 	std::atomic<bool> bIsRunning = true;
     DataBase db;
+	TransactionData transactionData;
+	
+	transactionData.Symbol = "BTCUSDT";
+	transactionData.Side = "BUY";
+	transactionData.Type = "MARKET";
+	transactionData.Quantity = 0.001;
 
 	auto binanceConfig = Binance::ReadConfig("include/config/config.json");
 
@@ -157,15 +163,23 @@ int main()
 
     std::thread tuiThread([&dashBoard]()
         {
-			dashBoard.TuiStarter();
+    		dashBoard.TuiStarter();
         }
     );
+
+	std::thread restThread([&newRequest](const TransactionData& transactionData)
+		{
+			newRequest.SendTransaction(transactionData);
+		},
+		std::ref(transactionData)
+	);
 
     ioThread.join();
     bIsRunning = false;
     portfolioThread.join();
     dbThread.join();
 	tuiThread.join();
+	restThread.join();
 
     return 0;
 }
