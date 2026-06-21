@@ -11,7 +11,7 @@
 #include <boost/beast/core.hpp>
 
 #include "models/trade_event.hpp"
-#include "threading/trade_queue.hpp"
+#include "trading/trade_queue.hpp"
 
 namespace Beast = boost::beast;                  // from <boost/beast.hpp>
 namespace Http = Beast::http;                   // from <boost/beast/http.hpp>

@@ -2,11 +2,10 @@
 
 #include <string>
 
-struct Position
+struct TransactionData
 {
 	std::string Symbol;
+	std::string Side;
+	std::string Type;
 	double Quantity;
-	double Price;
-	double TotalQuantity;
-	double TotalValue;
 };

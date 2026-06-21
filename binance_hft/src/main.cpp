@@ -3,11 +3,13 @@
 #include <ftxui/component/screen_interactive.hpp>
 
 #include "config/binance_config.hpp"
+#include "config/config_reader.hpp"
 #include "network/websocket_client.hpp"
 #include "network/reconnect_manager.hpp"
 #include "portfolio/portfolio.hpp"
 #include "strategy/trading_strategy.hpp"
 #include "database/database.hpp"
+#include "rest/rest_requester.hpp"
 #include "tui/dashboard.hpp"
 
 boost::asio::executor_work_guard<boost::asio::io_context::executor_type>* workGuard;
@@ -23,15 +25,8 @@ void SignalHandler(int signal)
 int main()
 {
     void(std::signal(SIGINT, SignalHandler));
-    std::vector<Position> positions{};
 
     TradeBuffer tradeBuffer;
-    AccountInfo accountInfo{
-        1,
-		"Max",
-        positions
-    };
-
     Net::io_context ioContext;
     Net::ssl::context sslContext{ Net::ssl::context::tlsv12_client };
     TradeQueue<TradeEvent> queue;
@@ -39,21 +34,27 @@ int main()
     TradeQueue<TradeBatch> dbBatchQueue;
 	std::atomic<bool> bIsRunning = true;
     DataBase db;
-    Binance::BinanceConfig binanceConfig{
-        "stream.binance.com",
-        "9443",
-        std::chrono::seconds(16),
-        std::chrono::seconds(1),
-        std::chrono::seconds(5)
-    };
+	TransactionData transactionData;
+	
+	transactionData.Symbol = "BTCUSDT";
+	transactionData.Side = "BUY";
+	transactionData.Type = "MARKET";
+	transactionData.Quantity = 0.001;
+
+	auto binanceConfig = Binance::ReadConfig("include/config/config.json");
 
     auto client = std::make_shared<Binance::WebSocketClient>(
-        binanceConfig.Host,
-        binanceConfig.Port,
+		binanceConfig.WsHost,
+		binanceConfig.WsPort,
         ioContext,
         sslContext,
         queue
         );
+
+	Binance::RestRequest newRequest(binanceConfig.ApiKey, binanceConfig.SecretKey, binanceConfig.RestHost, 
+		binanceConfig.RestPort, ioContext, sslContext);
+
+	AccountInfo accountInfo = newRequest.FetchAccountInfo();
 
     auto reconnectManager = std::make_shared<Binance::ReconnectManager>(client, ioContext, binanceConfig);
 
@@ -162,15 +163,23 @@ int main()
 
     std::thread tuiThread([&dashBoard]()
         {
-			dashBoard.TuiStarter();
+    		dashBoard.TuiStarter();
         }
     );
+
+	std::thread restThread([&newRequest](const TransactionData& transactionData)
+		{
+			newRequest.SendTransaction(transactionData);
+		},
+		std::ref(transactionData)
+	);
 
     ioThread.join();
     bIsRunning = false;
     portfolioThread.join();
     dbThread.join();
 	tuiThread.join();
+	restThread.join();
 
     return 0;
 }

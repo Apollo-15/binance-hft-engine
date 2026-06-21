@@ -14,7 +14,7 @@ bool DataBase::OpenConnection(const std::string& filename)
 {
 	std::scoped_lock<std::mutex> lock(Mutex);
 
-	auto isOk = sqlite3_open_v2(
+	const auto isOk = sqlite3_open_v2(
 		filename.c_str(), 
 		&Db, 
 		SQLITE_OPEN_READWRITE | SQLITE_OPEN_CREATE, 

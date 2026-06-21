@@ -34,9 +34,6 @@
     <Filter Include="third_party\simdjson\src">
       <UniqueIdentifier>{4e53d6cd-8664-49a9-8d72-a0f82bfb76d2}</UniqueIdentifier>
     </Filter>
-    <Filter Include="include\threading">
-      <UniqueIdentifier>{0c4ff5ac-2c5b-486f-8f50-f8679da76217}</UniqueIdentifier>
-    </Filter>
     <Filter Include="src\strategy">
       <UniqueIdentifier>{3699b462-acb6-4eed-8f68-afe0f37efbb0}</UniqueIdentifier>
     </Filter>
@@ -64,7 +61,19 @@
     <Filter Include="include\models">
       <UniqueIdentifier>{85e881fc-8f73-4a00-80a7-d969aac7d94f}</UniqueIdentifier>
     </Filter>
-    <Filter Include="src\threading">
+    <Filter Include="include\rest">
+      <UniqueIdentifier>{eb2a0c1a-19f3-400c-bd3a-1a0849a5976c}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="src\rest">
+      <UniqueIdentifier>{32a488f6-466a-4c9d-8a55-e8e1a58a999e}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="src\config">
+      <UniqueIdentifier>{769eafef-0453-4f4f-84c0-0758559c6d86}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="include\trading">
+      <UniqueIdentifier>{0c4ff5ac-2c5b-486f-8f50-f8679da76217}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="src\trading">
       <UniqueIdentifier>{2d49acd9-d41e-485f-b026-7ab38d7081b0}</UniqueIdentifier>
     </Filter>
   </ItemGroup>
@@ -83,9 +92,6 @@
     </ClInclude>
     <ClInclude Include="third_party\simdjson\include\simdjson.h">
       <Filter>third_party\simdjson\include</Filter>
-    </ClInclude>
-    <ClInclude Include="include\threading\trade_queue.hpp">
-      <Filter>include\threading</Filter>
     </ClInclude>
     <ClInclude Include="include\models\trade_batch.hpp">
       <Filter>include\models</Filter>
@@ -108,14 +114,38 @@
     <ClInclude Include="include\tui\dashboard.hpp">
       <Filter>include\tui</Filter>
     </ClInclude>
-    <ClInclude Include="include\threading\trade_buffer.hpp">
-      <Filter>include\threading</Filter>
-    </ClInclude>
     <ClInclude Include="include\models\account_info.hpp">
       <Filter>include\models</Filter>
     </ClInclude>
     <ClInclude Include="include\models\position.hpp">
       <Filter>include\models</Filter>
+    </ClInclude>
+    <ClInclude Include="include\rest\rest_requester.hpp">
+      <Filter>include\rest</Filter>
+    </ClInclude>
+    <ClInclude Include="include\config\config_reader.hpp">
+      <Filter>include\config</Filter>
+    </ClInclude>
+    <ClInclude Include="include\parser\account_parser.hpp">
+      <Filter>include\parser</Filter>
+    </ClInclude>
+    <ClInclude Include="include\models\transaction_data.hpp">
+      <Filter>include\models</Filter>
+    </ClInclude>
+    <ClInclude Include="include\models\full_response.hpp">
+      <Filter>include\models</Filter>
+    </ClInclude>
+    <ClInclude Include="include\models\fill_info.hpp">
+      <Filter>include\models</Filter>
+    </ClInclude>
+    <ClInclude Include="include\parser\full_response_parser.hpp">
+      <Filter>include\parser</Filter>
+    </ClInclude>
+    <ClInclude Include="include\trading\trade_buffer.hpp">
+      <Filter>include\trading</Filter>
+    </ClInclude>
+    <ClInclude Include="include\trading\trade_queue.hpp">
+      <Filter>include\trading</Filter>
     </ClInclude>
   </ItemGroup>
   <ItemGroup>
@@ -143,12 +173,30 @@
     <ClCompile Include="src\tui\dashboard.cpp">
       <Filter>src\tui</Filter>
     </ClCompile>
-    <ClCompile Include="src\threading\trade_buffer.cpp">
-      <Filter>src\threading</Filter>
+    <ClCompile Include="src\rest\rest_requester.cpp">
+      <Filter>src\rest</Filter>
+    </ClCompile>
+    <ClCompile Include="src\config\config_reader.cpp">
+      <Filter>src\config</Filter>
+    </ClCompile>
+    <ClCompile Include="src\parser\account_parser.cpp">
+      <Filter>src\parser</Filter>
+    </ClCompile>
+    <ClCompile Include="src\parser\full_response_parser.cpp">
+      <Filter>src\parser</Filter>
+    </ClCompile>
+    <ClCompile Include="src\trading\trade_buffer.cpp">
+      <Filter>src\trading</Filter>
     </ClCompile>
   </ItemGroup>
   <ItemGroup>
     <None Include="..\.gitignore" />
     <None Include="..\README.md" />
+    <None Include="include\config\config_private.json">
+      <Filter>include\config</Filter>
+    </None>
+    <None Include="include\config\config.json">
+      <Filter>include\config</Filter>
+    </None>
   </ItemGroup>
 </Project>

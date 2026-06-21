@@ -7,7 +7,6 @@
 #include "boost/asio/steady_timer.hpp"
 #include "config/binance_config.hpp"
 
-
 namespace Binance
 {
 	class ReconnectManager
