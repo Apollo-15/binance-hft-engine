@@ -79,7 +79,7 @@ void DashBoard::TuiStarter()
 	);
 
 	auto candlestickRenderer = ftxui::Renderer([&]
-		{
+		{	
 			std::vector<ftxui::Element> elements;
 
 			double maxPrice = std::numeric_limits<double>::lowest();
@@ -88,22 +88,27 @@ void DashBoard::TuiStarter()
 			for (const auto& [timestamp, candle] 
 				: CandlestickStorage::Instance().GetCandles(Interval::Min1))
 			{
-				if (candle.HighPrice > maxPrice)
-				{
-					maxPrice = candle.HighPrice;
-				}
-
-				if (candle.LowPrice < minPrice)
-				{
-					minPrice = candle.LowPrice;
-				}	
+				maxPrice = std::max(maxPrice, candle.HighPrice);
+				minPrice = std::min(minPrice, candle.LowPrice);
 			}
 
-			int terminalHeight = screen.dimy() - 4;
+			const uint64_t totalCandlesSize = CandlestickStorage::Instance().GetCandles(Interval::Min1).size();
+			const int maxVisibleCandles = screen.dimx() / 3;
+			const uint64_t unseenCandlesCount = std::max<uint64_t>(0, totalCandlesSize - maxVisibleCandles);
+
+			const int terminalHeight = screen.dimy() - 4;
+
+			uint64_t index = 0;
 
 			for (const auto& [timestamp, candle]
 				: CandlestickStorage::Instance().GetCandles(Interval::Min1))
 			{
+				if (index < unseenCandlesCount)
+				{
+					index++;
+					continue;
+				}
+
 				const double rowHigh = terminalHeight - ((candle.HighPrice - minPrice) / (maxPrice - minPrice) * terminalHeight);
 				double rowOpen = terminalHeight - ((candle.OpenPrice - minPrice) / (maxPrice - minPrice) * terminalHeight);
 				double rowClose = terminalHeight - ((candle.ClosePrice - minPrice) / (maxPrice - minPrice) * terminalHeight);
@@ -134,6 +139,7 @@ void DashBoard::TuiStarter()
 					ftxui::Color::Green : 
 					ftxui::Color::Red));
 
+				index++;
 			}
 
 			double niceRoundedFraction;

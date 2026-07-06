@@ -14,7 +14,7 @@ void CandlestickStorage::Upsert(Interval interval, const Candle& candle)
 
 	Storage[IntervalIndex][candle.CandlestickStartTime] = candle;
 
-	if (Storage[IntervalIndex].size() > 49)
+	if (Storage[IntervalIndex].size() > 750)
 	{
 		Storage[IntervalIndex].erase(Storage[IntervalIndex].begin());
 	}
@@ -39,7 +39,7 @@ void CandlestickStorage::UpsertBatch(Interval interval, const std::vector<Candle
 	{
 		Storage[IntervalIndex][candle.CandlestickStartTime] = candle;
 
-		if (Storage[IntervalIndex].size() > 49)
+		if (Storage[IntervalIndex].size() > 750)
 		{
 			Storage[IntervalIndex].erase(Storage[IntervalIndex].begin());
 		}
