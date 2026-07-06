@@ -101,7 +101,7 @@ std::optional<FullResponse> JsonParser::ParseFullResponse(const std::string& jso
 	}
 	catch (const std::exception& ex)
 	{
-		std::cerr << "Error happened: " << ex.what() << '\n';
+		std::cerr << "[Full Response Parser] Error happened: " << ex.what() << '\n';
 		return std::nullopt;
 	}
 }

@@ -9,6 +9,8 @@
 #include "portfolio/portfolio.hpp"
 #include "strategy/trading_strategy.hpp"
 #include "database/database.hpp"
+#include "market/candlestick_storage.hpp"
+#include "network/candlestick_websocket_client.hpp"
 #include "rest/rest_requester.hpp"
 #include "tui/dashboard.hpp"
 
@@ -51,15 +53,28 @@ int main()
         queue
         );
 
-	Binance::RestRequest newRequest(binanceConfig.ApiKey, binanceConfig.SecretKey, binanceConfig.RestHost, 
+	auto candlestickClient = std::make_shared<CandlestickWebSocketClient>(
+		binanceConfig, 
+		sslContext
+		);
+
+	Binance::RestRequest newRequest(binanceConfig.ApiKey, binanceConfig.SecretKey, binanceConfig.TestnetRestHost, 
 		binanceConfig.RestPort, ioContext, sslContext);
 
 	AccountInfo accountInfo = newRequest.FetchAccountInfo();
 
+	std::vector<Candle> candlestickInfo = newRequest.FetchHistoricalCandlesticks(Interval::Min1, binanceConfig.RestHost);
+
+	CandlestickStorage::Instance().UpsertBatch(Interval::Min1, candlestickInfo);
+
     auto reconnectManager = std::make_shared<Binance::ReconnectManager>(client, ioContext, binanceConfig);
+	auto candlestickReconnectManager = std::make_shared<Binance::ReconnectManager>(candlestickClient, ioContext, binanceConfig);
 
     client->SetManager(reconnectManager);
     client->Connect();
+
+	candlestickClient->SetManager(candlestickReconnectManager);
+	candlestickClient->Connect();
 
     db.OpenConnection("portfolio.db");
     db.CreatePortfolioTable();

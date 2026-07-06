@@ -1,16 +1,24 @@
-#include "tui/dashboard.hpp"
+﻿#include "tui/dashboard.hpp"
 
 #include "config/binance_config.hpp"
 #include "ftxui/component/screen_interactive.hpp"
 #include "ftxui/component/component.hpp"  // for Radiobox, Renderer, Tab, Toggle, Vertical
+#include "market/candlestick_storage.hpp"
 #include "network/websocket_client.hpp"
+
+#include <limits>
+#include <algorithm>
+#include <iostream>
 
 void DashBoard::TuiStarter()
 {
+	auto screen = ftxui::ScreenInteractive::Fullscreen();
+
 	const std::vector<std::string> tabNames
 	{
 		"Account",
 		"Trades",
+		"Candlesticks",
 		"DataBase",
 		"Logs",
 		"Connection Status"
@@ -70,6 +78,128 @@ void DashBoard::TuiStarter()
 		}
 	);
 
+	auto candlestickRenderer = ftxui::Renderer([&]
+		{
+			std::vector<ftxui::Element> elements;
+
+			double maxPrice = std::numeric_limits<double>::lowest();
+			double minPrice = std::numeric_limits<double>::max();
+
+			for (const auto& [timestamp, candle] 
+				: CandlestickStorage::Instance().GetCandles(Interval::Min1))
+			{
+				if (candle.HighPrice > maxPrice)
+				{
+					maxPrice = candle.HighPrice;
+				}
+
+				if (candle.LowPrice < minPrice)
+				{
+					minPrice = candle.LowPrice;
+				}	
+			}
+
+			int terminalHeight = screen.dimy() - 4;
+
+			for (const auto& [timestamp, candle]
+				: CandlestickStorage::Instance().GetCandles(Interval::Min1))
+			{
+				const double rowHigh = terminalHeight - ((candle.HighPrice - minPrice) / (maxPrice - minPrice) * terminalHeight);
+				double rowOpen = terminalHeight - ((candle.OpenPrice - minPrice) / (maxPrice - minPrice) * terminalHeight);
+				double rowClose = terminalHeight - ((candle.ClosePrice - minPrice) / (maxPrice - minPrice) * terminalHeight);
+				const double rowLow = terminalHeight - ((candle.LowPrice - minPrice) / (maxPrice - minPrice) * terminalHeight);
+
+				const double bodyTop = std::floor(std::min(rowOpen, rowClose));
+				const double bodyBottom = std::ceil(std::max(rowOpen, rowClose));
+
+				std::vector<ftxui::Element> candleColumn;
+
+				for (int emptyRow = 0; emptyRow < static_cast<int>(std::floor(rowHigh)); emptyRow++)
+				{
+					candleColumn.push_back(ftxui::text(" "));
+				}
+
+				for (int row = static_cast<int>(std::floor(rowHigh)); 
+				         row <= static_cast<int>(std::ceil(rowLow)); row++)
+				{
+					candleColumn.push_back(ftxui::text(row >= bodyTop && row <= bodyBottom ? 
+						reinterpret_cast<const char*>(u8"▐█▌") : 
+						reinterpret_cast<const char*>(u8" │")));
+				}
+
+				elements.push_back(ftxui::vbox(candleColumn) | 
+					ftxui::color(!candle.IsCandlestickClosed ? 
+					ftxui::Color::GrayDark :
+					candle.ClosePrice > candle.OpenPrice ?
+					ftxui::Color::Green : 
+					ftxui::Color::Red));
+
+			}
+
+			double niceRoundedFraction;
+
+			const int desiredLabelCount = terminalHeight / 3;
+			const double rawStep = (maxPrice - minPrice) / desiredLabelCount;
+			const double exponentValue = std::floor(std::log10(rawStep));
+			const double fractionalPart = rawStep / std::pow(10.0, exponentValue);
+
+			if (fractionalPart <= 1)
+			{
+				niceRoundedFraction = 1;
+			}
+			else if (fractionalPart <= 2)
+			{
+				niceRoundedFraction = 2;
+			}
+			else if (fractionalPart <= 5)
+			{
+				niceRoundedFraction = 5;
+			}
+			else
+			{
+				niceRoundedFraction = 10;
+			}
+
+			const double step = niceRoundedFraction * std::pow(10.0, exponentValue);
+			double labelPrice = std::ceil(minPrice / step) * step;
+			
+			std::vector<std::pair<int, double>> priceLabels;
+
+			while (labelPrice <= maxPrice)
+			{
+				const int labelRow = static_cast<int>(std::round(terminalHeight - (labelPrice -minPrice) / (maxPrice - minPrice) * terminalHeight));
+				priceLabels.push_back({ labelRow, labelPrice });
+				labelPrice += step;
+			}
+
+			std::vector<ftxui::Element> priceLabelElements;
+
+			for (int row = 0; row <= terminalHeight; row++)
+			{
+				bool foundLabel = false;
+				std::ostringstream labelStream;
+
+				for (const auto & priceLabel : priceLabels)
+				{
+					if (priceLabel.first == row)
+					{
+						labelStream << std::fixed << std::setprecision(0) << priceLabel.second;
+						priceLabelElements.push_back(ftxui::text(labelStream.str()));
+						foundLabel = true;
+						break;
+					}
+				}
+				if (!foundLabel)
+				{
+					priceLabelElements.push_back(ftxui::text(" "));
+				}
+			}
+			auto candlestickChart = ftxui::hbox(elements);
+
+			return ftxui::hbox({candlestickChart, ftxui::separator(), ftxui::vbox(priceLabelElements)});
+		}
+	);
+
 	auto databaseRenderer = ftxui::Renderer([&]
 		{
 		std::vector<ftxui::Element> elements;
@@ -117,7 +247,7 @@ void DashBoard::TuiStarter()
 
 	const ftxui::Component tabContainer = ftxui::Container::Tab(
 		{
-				accountRenderer, tradeRenderer, databaseRenderer, logsRenderer, connectionRenderer
+				accountRenderer, tradeRenderer, candlestickRenderer , databaseRenderer, logsRenderer, connectionRenderer
 		},
 	&tabSelected);
 
@@ -137,8 +267,6 @@ void DashBoard::TuiStarter()
 				}) | ftxui::border;
 		}
 	);
-
-	auto screen = ftxui::ScreenInteractive::Fullscreen();
 
 	screen.Loop(renderer);
 }

@@ -7,10 +7,12 @@ namespace Binance
 {
 	struct BinanceConfig
 	{
+		std::string TestnetRestHost;
 		std::string RestHost;
 		std::string RestPort;
 		std::string WsHost;
 		std::string WsPort;
+		std::string CWsPath;
 		std::string ApiKey;
 		std::string SecretKey;
 		std::chrono::seconds Cap;

@@ -5,7 +5,9 @@
 #include <boost/beast/ssl.hpp>
 #include <boost/beast/websocket/stream.hpp>
 
+#include "config/binance_config.hpp"
 #include "models/account_info.hpp"
+#include "models/candle.hpp"
 #include "models/full_response.hpp"
 #include "models/transaction_data.hpp"
 
@@ -48,5 +50,6 @@ namespace Binance
 
 		AccountInfo FetchAccountInfo();
 		FullResponse SendTransaction(const TransactionData& data);
+		std::vector<Candle> FetchHistoricalCandlesticks(Interval interval, const std::string& restHost);
 	};
 }

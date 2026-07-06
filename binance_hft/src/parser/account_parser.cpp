@@ -46,7 +46,7 @@ std::optional<AccountInfo> JsonParser::ParseAccount(const std::string& json)
 	}
 	catch (const std::exception& ex)
 	{
-		std::cerr << "Error happened: " << ex.what() << '\n';
+		std::cerr << "[Account Parser] Error happened: " << ex.what() << '\n';
 
 		return std::nullopt;
 	}

@@ -22,20 +22,24 @@ Binance::BinanceConfig Binance::ReadConfig(const std::string& path)
 
 		try
 		{
-			std::string_view restHostView;
+			std::string_view testnetRestHostView;
+			std::string_view restHost;
 			std::string_view restPortView;
 			std::string_view wsHostView;
 			std::string_view wsPortView;
+			std::string_view cWsPathView;
 			std::string_view apiView;
 			std::string_view secretKeyView;
 			std::string jsonCopy = ss;
 			OnDemand::parser parser;
 			OnDemand::document doc = parser.iterate(simdjson::pad(jsonCopy));
 
-			doc["RestHost"].get(restHostView);
+			doc["TestnetRestHost"].get(testnetRestHostView);
+			doc["RestHost"].get(restHost);
 			doc["RestPort"].get(restPortView);
 			doc["WsHost"].get(wsHostView);
 			doc["WsPort"].get(wsPortView);
+			doc["CWsPath"].get(cWsPathView);
 			doc["APIKey"].get(apiView);
 			doc["SecretKey"].get(secretKeyView);
 
@@ -48,10 +52,12 @@ Binance::BinanceConfig Binance::ReadConfig(const std::string& path)
 
 			return BinanceConfig
 			{
-				.RestHost = std::string(restHostView),
+				.TestnetRestHost = std::string(testnetRestHostView),
+				.RestHost = std::string(restHost),
 				.RestPort = std::string(restPortView),
 				.WsHost = std::string(wsHostView),
 				.WsPort = std::string(wsPortView),
+				.CWsPath = std::string(cWsPathView),
 				.ApiKey = std::string(apiView),
 				.SecretKey = std::string(secretKeyView),
 				.Cap = cap,

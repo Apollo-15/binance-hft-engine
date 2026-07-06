@@ -4,9 +4,6 @@
     <Filter Include="include">
       <UniqueIdentifier>{0198dd85-3e90-4c00-a62a-21f9fabcbb13}</UniqueIdentifier>
     </Filter>
-    <Filter Include="market">
-      <UniqueIdentifier>{9640c9bd-1f88-439e-8d0b-dbf380b568ec}</UniqueIdentifier>
-    </Filter>
     <Filter Include="src">
       <UniqueIdentifier>{ea8d6093-8e24-4a5b-9a63-f4f9658fc718}</UniqueIdentifier>
     </Filter>
@@ -76,11 +73,14 @@
     <Filter Include="src\trading">
       <UniqueIdentifier>{2d49acd9-d41e-485f-b026-7ab38d7081b0}</UniqueIdentifier>
     </Filter>
+    <Filter Include="include\market">
+      <UniqueIdentifier>{9640c9bd-1f88-439e-8d0b-dbf380b568ec}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="src\market">
+      <UniqueIdentifier>{20614ebf-275f-4b5d-9a5b-470f9ee02472}</UniqueIdentifier>
+    </Filter>
   </ItemGroup>
   <ItemGroup>
-    <ClInclude Include="include\network\orderbook.hpp">
-      <Filter>include</Filter>
-    </ClInclude>
     <ClInclude Include="include\network\websocket_client.hpp">
       <Filter>include\network</Filter>
     </ClInclude>
@@ -147,6 +147,27 @@
     <ClInclude Include="include\trading\trade_queue.hpp">
       <Filter>include\trading</Filter>
     </ClInclude>
+    <ClInclude Include="include\market\candlestick_storage.hpp">
+      <Filter>include\market</Filter>
+    </ClInclude>
+    <ClInclude Include="include\market\candlestick_utilities.hpp">
+      <Filter>include\market</Filter>
+    </ClInclude>
+    <ClInclude Include="include\models\connection_status.hpp">
+      <Filter>include\models</Filter>
+    </ClInclude>
+    <ClInclude Include="include\network\iwebsocket_client.hpp">
+      <Filter>include\network</Filter>
+    </ClInclude>
+    <ClInclude Include="include\parser\candlestick_parser.hpp">
+      <Filter>include\parser</Filter>
+    </ClInclude>
+    <ClInclude Include="include\network\candlestick_websocket_client.hpp">
+      <Filter>include\network</Filter>
+    </ClInclude>
+    <ClInclude Include="include\models\candle.hpp">
+      <Filter>include\models</Filter>
+    </ClInclude>
   </ItemGroup>
   <ItemGroup>
     <ClCompile Include="src\main.cpp">
@@ -187,6 +208,15 @@
     </ClCompile>
     <ClCompile Include="src\trading\trade_buffer.cpp">
       <Filter>src\trading</Filter>
+    </ClCompile>
+    <ClCompile Include="src\market\candlestick_storage.cpp">
+      <Filter>src\market</Filter>
+    </ClCompile>
+    <ClCompile Include="src\parser\candlestick_parser.cpp">
+      <Filter>src\parser</Filter>
+    </ClCompile>
+    <ClCompile Include="src\network\candlestick_websocket_client.cpp">
+      <Filter>src\network</Filter>
     </ClCompile>
   </ItemGroup>
   <ItemGroup>

@@ -1,4 +1,5 @@
 #pragma once
+
 #include "database/database.hpp"
 #include "models/account_info.hpp"
 #include "portfolio/portfolio.hpp"
