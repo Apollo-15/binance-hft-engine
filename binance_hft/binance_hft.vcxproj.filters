@@ -79,6 +79,12 @@
     <Filter Include="src\market">
       <UniqueIdentifier>{20614ebf-275f-4b5d-9a5b-470f9ee02472}</UniqueIdentifier>
     </Filter>
+    <Filter Include="include\tui\decorators">
+      <UniqueIdentifier>{84ddcc93-808c-4593-af82-9c77e8193546}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="src\tui\decorators">
+      <UniqueIdentifier>{aef5248b-1444-4f8f-a56c-b60a475c1af7}</UniqueIdentifier>
+    </Filter>
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="include\network\websocket_client.hpp">
@@ -168,6 +174,9 @@
     <ClInclude Include="include\models\candle.hpp">
       <Filter>include\models</Filter>
     </ClInclude>
+    <ClInclude Include="include\tui\decorators\square_separator.hpp">
+      <Filter>include\tui\decorators</Filter>
+    </ClInclude>
   </ItemGroup>
   <ItemGroup>
     <ClCompile Include="src\main.cpp">
@@ -217,6 +226,9 @@
     </ClCompile>
     <ClCompile Include="src\network\candlestick_websocket_client.cpp">
       <Filter>src\network</Filter>
+    </ClCompile>
+    <ClCompile Include="src\tui\decorators\square_separator.cpp">
+      <Filter>src\tui\decorators</Filter>
     </ClCompile>
   </ItemGroup>
   <ItemGroup>

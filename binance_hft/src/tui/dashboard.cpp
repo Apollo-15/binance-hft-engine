@@ -5,6 +5,7 @@
 #include "ftxui/component/component.hpp"  // for Radiobox, Renderer, Tab, Toggle, Vertical
 #include "market/candlestick_storage.hpp"
 #include "network/websocket_client.hpp"
+#include "tui/decorators/square_separator.hpp"
 
 #include <limits>
 #include <algorithm>
@@ -91,9 +92,14 @@ void DashBoard::TuiStarter()
 				maxPrice = std::max(maxPrice, candle.HighPrice);
 				minPrice = std::min(minPrice, candle.LowPrice);
 			}
+				
+			std::ostringstream priceLength;
+
+			priceLength << std::fixed << std::setprecision(0) << maxPrice;
 
 			const uint64_t totalCandlesSize = CandlestickStorage::Instance().GetCandles(Interval::Min1).size();
-			const int maxVisibleCandles = screen.dimx() / 3;
+			const uint64_t availableWidthForCandles = screen.dimx() - 2 - 1 - priceLength.str().size();
+			const uint64_t maxVisibleCandles = availableWidthForCandles / 3;
 			const uint64_t unseenCandlesCount = std::max<uint64_t>(0, totalCandlesSize - maxVisibleCandles);
 
 			const int terminalHeight = screen.dimy() - 4;
@@ -180,6 +186,8 @@ void DashBoard::TuiStarter()
 
 			std::vector<ftxui::Element> priceLabelElements;
 
+			SquareSeparator squareSeparator(terminalHeight, priceLabels);
+
 			for (int row = 0; row <= terminalHeight; row++)
 			{
 				bool foundLabel = false;
@@ -200,9 +208,9 @@ void DashBoard::TuiStarter()
 					priceLabelElements.push_back(ftxui::text(" "));
 				}
 			}
-			auto candlestickChart = ftxui::hbox(elements);
+			const ftxui::Element candlestickChart = ftxui::hbox(elements);
 
-			return ftxui::hbox({candlestickChart, ftxui::separator(), ftxui::vbox(priceLabelElements)});
+			return ftxui::hbox({candlestickChart | ftxui::flex , ftxui::vbox(squareSeparator.BuildRightBorder()), ftxui::vbox(priceLabelElements)});
 		}
 	);
 
