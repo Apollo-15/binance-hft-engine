@@ -5,6 +5,7 @@
 #include <openssl/hmac.h>
 
 #include "parser/account_parser.hpp"
+#include "parser/candlestick_parser.hpp"
 #include "parser/full_response_parser.hpp"
 
 namespace Beast = boost::beast;                  // from <boost/beast.hpp>
@@ -51,6 +52,7 @@ AccountInfo Binance::RestRequest::FetchAccountInfo()
 
 	Beast::get_lowest_layer(webSocket).connect(type);
 	webSocket.handshake(Net::ssl::stream_base::client);
+
 	auto httpRequest = Http::request<Http::empty_body>(Http::verb::get, target, 11);
 	httpRequest.set("X-MBX-APIKEY", ApiKey);
 	httpRequest.set(Http::field::host, Host);
@@ -170,5 +172,46 @@ FullResponse Binance::RestRequest::SendTransaction(const TransactionData& data)
 	else
 	{
 		return FullResponse();
+	}
+}
+
+std::vector<Candle> Binance::RestRequest::FetchHistoricalCandlesticks(Interval interval, Symbol symbol, const std::string& restHost)
+{
+	Beast::flat_buffer buffer;
+
+	Tcp::resolver resolver(IoContext);
+	Tcp::resolver::results_type type = resolver.resolve(restHost, Port);
+
+	std::string target = "/api/v3/klines?symbol="+ std::string(SymbolToString(symbol)) + "&interval=" + std::string(IntervalToString(interval)) + "&limit=100";
+
+	auto webSocket = Net::ssl::stream<Beast::tcp_stream>(IoContext, SslContext);
+
+	if (!SSL_set_tlsext_host_name(webSocket.native_handle(), restHost.c_str()))
+	{
+		throw(Beast::system_error(
+			static_cast<int>(::ERR_get_error()),
+			Net::error::get_ssl_category()));
+	}
+
+	Beast::get_lowest_layer(webSocket).connect(type);
+	webSocket.handshake(Net::ssl::stream_base::client);
+
+	auto httpRequest = Http::request<Http::empty_body>(Http::verb::get, target, 11);
+	httpRequest.set(Http::field::host, restHost);
+	httpRequest.keep_alive(false);
+
+	Http::write(webSocket, httpRequest);
+	auto httpResponse = Http::response<Http::basic_string_body<char>>();
+	Http::read(webSocket, buffer, httpResponse);
+
+	std::optional<std::vector<Candle>> info = JsonParser::ParseHistoricalCandlestick(httpResponse.body(), interval);
+
+	if (info.has_value())
+	{
+		return info.value();
+	}
+	else
+	{
+		return std::vector<Candle>();
 	}
 }

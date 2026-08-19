@@ -30,7 +30,7 @@ std::optional<TradeEvent> JsonParser::Parse(const std::string& json)
 	}
 	catch (const std::exception& ex)
 	{
-		std::cerr << "Error happened: " << ex.what() << '\n';
+		std::cerr << "[Trade Parser] Error happened: " << ex.what() << '\n';
 
 		return std::nullopt;
 	}

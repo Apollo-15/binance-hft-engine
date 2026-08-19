@@ -1,8 +1,10 @@
 {
 	"WsHost": "stream.binance.com",
 	"WsPort": "9443",
-	"RestHost": "testnet.binance.vision",
+	"TestnetRestHost": "testnet.binance.vision",
+	"RestHost": "api.binance.com",
 	"RestPort": "443",
+	"CWsPath": "/stream?streams=btcusdt@kline_1s/btcusdt@kline_1m/btcusdt@kline_3m/btcusdt@kline_5m/btcusdt@kline_15m/btcusdt@kline_30m/btcusdt@kline_1h/btcusdt@kline_2h/btcusdt@kline_4h/btcusdt@kline_6h/btcusdt@kline_8h/btcusdt@kline_12h/btcusdt@kline_1d/btcusdt@kline_3d/btcusdt@kline_1w/btcusdt@kline_1M",
 	"APIKey": "your-api-key",
 	"SecretKey": "your-secret-key",
 	"Cap": 16,

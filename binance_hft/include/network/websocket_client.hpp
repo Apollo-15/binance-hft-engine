@@ -10,8 +10,10 @@
 #include <boost/beast/core/tcp_stream.hpp>
 #include <boost/beast/core.hpp>
 
+#include "iwebsocket_client.hpp"
 #include "models/trade_event.hpp"
 #include "trading/trade_queue.hpp"
+#include "models/connection_status.hpp"
 
 namespace Beast = boost::beast;                  // from <boost/beast.hpp>
 namespace Http = Beast::http;                   // from <boost/beast/http.hpp>
@@ -23,19 +25,9 @@ namespace Binance
 {
 	class ReconnectManager;
 
-	enum class ConnectionStatus 
-		: std::uint8_t
-	{
-		Disconnected,
-		Connecting,
-		Connected,
-		Closed,
-		Error,
-		Reconnecting
-	};
-
 	class WebSocketClient 
-		: public std::enable_shared_from_this<WebSocketClient>
+		: public std::enable_shared_from_this<WebSocketClient>,
+	      public  IWebSocketClient
 	{
 	private:
 		std::string Host;
@@ -53,10 +45,10 @@ namespace Binance
 		std::weak_ptr<ReconnectManager> Manager;
 
 	public:
-		void Connect();
+		void Connect() override;
 		void Close();
 		void ReadMessage();
-		void Reset();
+		void Reset() override;
 
 		[[nodiscard]]
 		ConnectionStatus GetStatus() const;

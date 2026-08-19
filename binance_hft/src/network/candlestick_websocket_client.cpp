@@ -1,21 +1,26 @@
-#include "network/websocket_client.hpp"
-#include "network/reconnect_manager.hpp"
+#include "network/candlestick_websocket_client.hpp"
 
-#include <iostream>
-#include <boost/asio/io_context.hpp>
-#include <boost/asio/ip/tcp.hpp>
-#include <boost/beast/websocket/stream.hpp>
 #include <boost/beast/core/buffers_to_string.hpp>
+#include <ftxui/component/screen_interactive.hpp>
+#include <debugapi.h>
 
-#include "parser/trade_parser.hpp"
+#include "market/symbol_utilities.hpp"
+#include "market/candlestick_storage.hpp"
+#include "market/candlestick_websocket_path_builder.hpp"
+#include "parser/candlestick_parser.hpp"
 
-void Binance::WebSocketClient::Connect()
+void CandlestickWebSocketClient::Connect()
 {
 	CurrentStatus = ConnectionStatus::Connecting;
 
+	if (IoThread.joinable() && IoContext.stopped())
+	{
+		IoContext.restart();
+	}
+
 	Resolver.async_resolve(
-		Host, 
-		Port,
+		BConfig.WsHost,
+		BConfig.WsPort,
 		[self = shared_from_this()](
 			boost::system::error_code ec,
 			const Tcp::resolver::results_type& results
@@ -43,8 +48,8 @@ void Binance::WebSocketClient::Connect()
 				[self](
 					boost::system::error_code ec,
 					[[maybe_unused]]
-					const Tcp::endpoint& endpoint
-					)
+			const Tcp::endpoint& endpoint
+				)
 				{
 					if (ec)
 					{
@@ -89,8 +94,8 @@ void Binance::WebSocketClient::Connect()
 							Beast::get_lowest_layer(*self->WebSocket).expires_never();
 
 							self->WebSocket->async_handshake(
-								self->Host,
-								"/ws/btcusdt@trade",
+								self->BConfig.WsHost,
+								self->BConfig.CWsPath,
 								[self](
 									boost::system::error_code ec
 									)
@@ -98,7 +103,7 @@ void Binance::WebSocketClient::Connect()
 									if (ec)
 									{
 										self->CurrentStatus = ConnectionStatus::Error;
-										std::cout << "Handshake error: " << ec.message() << "\n";
+										std::cout << "Candlestick Handshake error: " << ec.message() << "\n";
 
 										auto lockedManager = self->Manager.lock();
 
@@ -123,9 +128,41 @@ void Binance::WebSocketClient::Connect()
 			);
 		}
 	);
+
+
+	if (!IoThread.joinable())
+	{
+		IoThread = std::thread([this] { IoContext.run(); });
+	}
 }
 
-void Binance::WebSocketClient::ReadMessage()
+void CandlestickWebSocketClient::Close()
+{
+	WebSocket->async_close(
+		WebSocket::close_code::normal,
+		[self = shared_from_this()](
+			boost::system::error_code ec
+			)
+		{
+			if (ec && ec != boost::asio::ssl::error::stream_truncated && ec != boost::asio::error::operation_aborted)
+			{
+				std::cerr << "Candlestick Close Error: " << ec.message();
+
+				return;
+			}
+
+			self->CurrentStatus = ConnectionStatus::Closed;
+			std::cout << "Connection closed!" << '\n';
+
+			self->BConfig.CWsPath = BuildCandlestickWebSocketPath(self->OwnSymbol);
+			OutputDebugStringA((self->BConfig.CWsPath + "\n").c_str());
+			self->Reset();
+			self->Connect();
+		}
+	);
+}
+
+void CandlestickWebSocketClient::ReadMessage()
 {
 	WebSocket->async_read(
 		Buffer,
@@ -137,16 +174,20 @@ void Binance::WebSocketClient::ReadMessage()
 		{
 			if (ec)
 			{
-				std::cout << "Reading error: " << ec.message() << "\n";
-
-				auto lockedManager = self->Manager.lock();
-
-				if (lockedManager == nullptr)
+				if (ec != boost::asio::error::operation_aborted)
 				{
-					return;
-				}
+					std::cout << "Candlestick Reading error: " << ec.message() << "\n";
 
-				lockedManager->StartReconnect();
+					auto lockedManager = self->Manager.lock();
+
+					if (lockedManager == nullptr)
+					{
+						return;
+					}
+
+					lockedManager->StartReconnect();
+
+				}
 
 				return;
 			}
@@ -155,24 +196,14 @@ void Binance::WebSocketClient::ReadMessage()
 
 			self->Buffer.consume(self->Buffer.size());
 
-			auto parsedData = JsonParser::Parse(message);
-
+			const auto parsedData = JsonParser::ParseCandlestick(message);
 			if (parsedData)
 			{
-				std::time_t time = parsedData->TradeTime / 1000;
-				std::tm localTime;
-
-				(void)localtime_s(&localTime, &time);
-				
-				/*std::cout << "Trade ID: " << parsedData->TradeId
-						  << " |Symbol: " << parsedData->Symbol 
-						  << " | Price: " << parsedData->Price
-				          << " | Quantity: " << std::fixed << std::setprecision(8) << parsedData->Quantity 
-						  << " | Time: " << std::put_time(&localTime, "%H:%M:%S")
-				          << "\n";
-					*/	  
-
-				self->Event.Push(parsedData.value());
+				CandlestickStorage::Instance().Upsert(parsedData->Interval, self->OwnSymbol, *parsedData);
+				if (ftxui::ScreenInteractive::Active() != nullptr)
+				{
+					ftxui::ScreenInteractive::Active()->RequestAnimationFrame();
+				}
 			}
 
 			self->ReadMessage();
@@ -180,38 +211,17 @@ void Binance::WebSocketClient::ReadMessage()
 	);
 }
 
-void Binance::WebSocketClient::Close()
-{
-	WebSocket->async_close(
-		WebSocket::close_code::normal,
-		[self = shared_from_this()](
-			boost::system::error_code ec
-			)
-		{
-			if (ec)
-			{
-				std::cout << "Close error: " << ec.message() << "\n";
-
-				return;
-			}
-
-			self->CurrentStatus = ConnectionStatus::Closed;
-			std::cout << "Connection closed!" << "\n";
-		}
-	);
-}
-
-void Binance::WebSocketClient::Reset()
+void CandlestickWebSocketClient::Reset()
 {
 	WebSocket = std::make_unique<WebSocket::stream<Beast::ssl_stream<Beast::tcp_stream>>>(IoContext, SslContext);
 }
 
-ConnectionStatus Binance::WebSocketClient::GetStatus() const
+ConnectionStatus CandlestickWebSocketClient::GetStatus() const
 {
 	return CurrentStatus;
 }
 
-void Binance::WebSocketClient::SetManager(const std::weak_ptr<ReconnectManager>& manager)
+void CandlestickWebSocketClient::SetManager(const std::weak_ptr<Binance::ReconnectManager>& manager)
 {
 	Manager = manager;
 }

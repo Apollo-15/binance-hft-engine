@@ -9,6 +9,9 @@
 #include "portfolio/portfolio.hpp"
 #include "strategy/trading_strategy.hpp"
 #include "database/database.hpp"
+#include "market/candlestick_websocket_path_builder.hpp"
+#include "market/historical_candlestick_loader.hpp"
+#include "network/candlestick_websocket_client.hpp"
 #include "rest/rest_requester.hpp"
 #include "tui/dashboard.hpp"
 
@@ -35,6 +38,7 @@ int main()
 	std::atomic<bool> bIsRunning = true;
     DataBase db;
 	TransactionData transactionData;
+	std::array<std::shared_ptr<Binance::ReconnectManager>, static_cast<size_t>(Symbol::FinalBorder)> candlestickReconnectManager;
 	
 	transactionData.Symbol = "BTCUSDT";
 	transactionData.Side = "BUY";
@@ -51,22 +55,42 @@ int main()
         queue
         );
 
-	Binance::RestRequest newRequest(binanceConfig.ApiKey, binanceConfig.SecretKey, binanceConfig.RestHost, 
+	/*auto candlestickClient = std::make_shared<CandlestickWebSocketClient>(
+		binanceConfig, 
+		sslContext
+		);*/
+
+	std::array<std::shared_ptr<CandlestickWebSocketClient>, static_cast<size_t>(Symbol::FinalBorder)> candlestickClient;
+
+	for	(int i = 0; i < static_cast<int>(Symbol::FinalBorder); i++)
+	{
+		Symbol currentSymbol = static_cast<Symbol>(i);
+
+		Binance::BinanceConfig symbolConfig = binanceConfig;
+		symbolConfig.CWsPath = BuildCandlestickWebSocketPath(currentSymbol);
+
+		candlestickClient[i] = std::make_shared<CandlestickWebSocketClient>(symbolConfig, sslContext, currentSymbol);
+		candlestickReconnectManager[i] = std::make_shared<Binance::ReconnectManager>(candlestickClient[i], ioContext, symbolConfig);
+
+		candlestickClient[i]->SetManager(candlestickReconnectManager[i]);
+		candlestickClient[i]->Connect();
+	}
+
+	Binance::RestRequest newRequest(binanceConfig.ApiKey, binanceConfig.SecretKey, binanceConfig.TestnetRestHost, 
 		binanceConfig.RestPort, ioContext, sslContext);
 
 	AccountInfo accountInfo = newRequest.FetchAccountInfo();
 
-    auto reconnectManager = std::make_shared<Binance::ReconnectManager>(client, ioContext, binanceConfig);
+	LoadAllHistoricalCandlesticks(newRequest, binanceConfig.RestHost);
 
-    client->SetManager(reconnectManager);
-    client->Connect();
+    auto reconnectManager = std::make_shared<Binance::ReconnectManager>(client, ioContext, binanceConfig);
 
     db.OpenConnection("portfolio.db");
     db.CreatePortfolioTable();
     db.CreateBatchesTable();
     db.CreateTradesTable();
 
-    DashBoard dashBoard(Portfolio::Instance(12), db, tradeBuffer, accountInfo);
+    DashBoard dashBoard(Portfolio::Instance(12), db, tradeBuffer, accountInfo, candlestickClient);
 
     auto localGuard = Net::make_work_guard(ioContext);
     workGuard = &localGuard;
