@@ -85,6 +85,12 @@
     <Filter Include="src\tui\decorators">
       <UniqueIdentifier>{aef5248b-1444-4f8f-a56c-b60a475c1af7}</UniqueIdentifier>
     </Filter>
+    <Filter Include="include\tui\widgets">
+      <UniqueIdentifier>{a8ca7275-4534-41b9-ac7d-08995fef3d0e}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="src\tui\widgets">
+      <UniqueIdentifier>{6c7d2435-f88a-4e0a-b979-92769e5ee06c}</UniqueIdentifier>
+    </Filter>
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="include\network\websocket_client.hpp">
@@ -177,6 +183,18 @@
     <ClInclude Include="include\tui\decorators\square_separator.hpp">
       <Filter>include\tui\decorators</Filter>
     </ClInclude>
+    <ClInclude Include="include\tui\widgets\wheel_picker.hpp">
+      <Filter>include\tui\widgets</Filter>
+    </ClInclude>
+    <ClInclude Include="include\market\historical_candlestick_loader.hpp">
+      <Filter>include\market</Filter>
+    </ClInclude>
+    <ClInclude Include="include\market\symbol_utilities.hpp">
+      <Filter>include\market</Filter>
+    </ClInclude>
+    <ClInclude Include="include\market\candlestick_websocket_path_builder.hpp">
+      <Filter>include\market</Filter>
+    </ClInclude>
   </ItemGroup>
   <ItemGroup>
     <ClCompile Include="src\main.cpp">
@@ -229,6 +247,12 @@
     </ClCompile>
     <ClCompile Include="src\tui\decorators\square_separator.cpp">
       <Filter>src\tui\decorators</Filter>
+    </ClCompile>
+    <ClCompile Include="src\tui\widgets\wheel_picker.cpp">
+      <Filter>src\tui\widgets</Filter>
+    </ClCompile>
+    <ClCompile Include="src\market\historical_candlestick_loader.cpp">
+      <Filter>src\market</Filter>
     </ClCompile>
   </ItemGroup>
   <ItemGroup>

@@ -175,14 +175,14 @@ FullResponse Binance::RestRequest::SendTransaction(const TransactionData& data)
 	}
 }
 
-std::vector<Candle> Binance::RestRequest::FetchHistoricalCandlesticks(Interval interval, const std::string& restHost)
+std::vector<Candle> Binance::RestRequest::FetchHistoricalCandlesticks(Interval interval, Symbol symbol, const std::string& restHost)
 {
 	Beast::flat_buffer buffer;
 
 	Tcp::resolver resolver(IoContext);
 	Tcp::resolver::results_type type = resolver.resolve(restHost, Port);
 
-	std::string target = "/api/v3/klines?symbol=BTCUSDT&interval=" + std::string(IntervalToString(interval)) + "&limit=100";
+	std::string target = "/api/v3/klines?symbol="+ std::string(SymbolToString(symbol)) + "&interval=" + std::string(IntervalToString(interval)) + "&limit=100";
 
 	auto webSocket = Net::ssl::stream<Beast::tcp_stream>(IoContext, SslContext);
 

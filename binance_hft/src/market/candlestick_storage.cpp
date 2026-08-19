@@ -6,42 +6,45 @@ CandlestickStorage& CandlestickStorage::Instance()
 	return instance;
 }
 
-void CandlestickStorage::Upsert(Interval interval, const Candle& candle)
+void CandlestickStorage::Upsert(Interval interval, Symbol symbol, const Candle& candle)
 {
 	std::scoped_lock<std::mutex> lock(Mutex);
 
-	size_t IntervalIndex = static_cast<size_t>(interval);
+	const size_t intervalIndex = static_cast<size_t>(interval);
+	const size_t symbolIndex = static_cast<size_t>(symbol);
 
-	Storage[IntervalIndex][candle.CandlestickStartTime] = candle;
+	Storage[symbolIndex][intervalIndex][candle.CandlestickStartTime] = candle;
 
-	if (Storage[IntervalIndex].size() > 750)
+	if (Storage[symbolIndex][intervalIndex].size() > 750)
 	{
-		Storage[IntervalIndex].erase(Storage[IntervalIndex].begin());
+		Storage[symbolIndex][intervalIndex].erase(Storage[symbolIndex][intervalIndex].begin());
 	}
 }
 
-std::map<uint64_t, Candle> CandlestickStorage::GetCandles(Interval interval)
+std::map<uint64_t, Candle> CandlestickStorage::GetCandles(Interval interval, Symbol symbol)
 {
 	std::scoped_lock<std::mutex> lock(Mutex);
 
-	size_t IntervalIndex = static_cast<size_t>(interval);
+	const size_t intervalIndex = static_cast<size_t>(interval);
+	const size_t symbolIndex = static_cast<size_t>(symbol);
 
-	return Storage[IntervalIndex];
+	return Storage[symbolIndex][intervalIndex];
 }
 
-void CandlestickStorage::UpsertBatch(Interval interval, const std::vector<Candle>& candles)
+void CandlestickStorage::UpsertBatch(Interval interval, Symbol symbol, const std::vector<Candle>& candles)
 {
 	std::scoped_lock<std::mutex> lock(Mutex);
 
-	size_t IntervalIndex = static_cast<size_t>(interval);
+	const size_t intervalIndex = static_cast<size_t>(interval);
+	const size_t symbolIndex = static_cast<size_t>(symbol);
 
 	for (const auto& candle : candles)
 	{
-		Storage[IntervalIndex][candle.CandlestickStartTime] = candle;
+		Storage[symbolIndex][intervalIndex][candle.CandlestickStartTime] = candle;
 
-		if (Storage[IntervalIndex].size() > 750)
+		if (Storage[symbolIndex][intervalIndex].size() > 750)
 		{
-			Storage[IntervalIndex].erase(Storage[IntervalIndex].begin());
+			Storage[symbolIndex][intervalIndex].erase(Storage[symbolIndex][intervalIndex].begin());
 		}
 	}
 }

@@ -137,6 +137,7 @@
     <ClCompile Include="src\database\database.cpp" />
     <ClCompile Include="src\main.cpp" />
     <ClCompile Include="src\market\candlestick_storage.cpp" />
+    <ClCompile Include="src\market\historical_candlestick_loader.cpp" />
     <ClCompile Include="src\network\candlestick_websocket_client.cpp" />
     <ClCompile Include="src\network\reconnect_manager.cpp" />
     <ClCompile Include="src\network\websocket_client.cpp" />
@@ -149,6 +150,7 @@
     <ClCompile Include="src\trading\trade_buffer.cpp" />
     <ClCompile Include="src\tui\dashboard.cpp" />
     <ClCompile Include="src\tui\decorators\square_separator.cpp" />
+    <ClCompile Include="src\tui\widgets\wheel_picker.cpp" />
     <ClCompile Include="third_party\simdjson\src\simdjson.cpp" />
   </ItemGroup>
   <ItemGroup>
@@ -157,6 +159,9 @@
     <ClInclude Include="include\database\database.hpp" />
     <ClInclude Include="include\market\candlestick_storage.hpp" />
     <ClInclude Include="include\market\candlestick_utilities.hpp" />
+    <ClInclude Include="include\market\candlestick_websocket_path_builder.hpp" />
+    <ClInclude Include="include\market\historical_candlestick_loader.hpp" />
+    <ClInclude Include="include\market\symbol_utilities.hpp" />
     <ClInclude Include="include\models\account_info.hpp" />
     <ClInclude Include="include\models\candle.hpp" />
     <ClInclude Include="include\models\connection_status.hpp" />
@@ -181,6 +186,7 @@
     <ClInclude Include="include\trading\trade_queue.hpp" />
     <ClInclude Include="include\tui\dashboard.hpp" />
     <ClInclude Include="include\tui\decorators\square_separator.hpp" />
+    <ClInclude Include="include\tui\widgets\wheel_picker.hpp" />
     <ClInclude Include="third_party\simdjson\include\simdjson.h" />
   </ItemGroup>
   <ItemGroup>

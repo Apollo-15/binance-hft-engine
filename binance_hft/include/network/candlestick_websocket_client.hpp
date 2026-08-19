@@ -11,6 +11,7 @@
 
 #include "boost/asio/steady_timer.hpp"
 #include "config/binance_config.hpp"
+#include "market/symbol_utilities.hpp"
 #include "models/connection_status.hpp"
 #include "network/iwebsocket_client.hpp"
 #include "network/reconnect_manager.hpp"
@@ -41,13 +42,14 @@ private:
 	bool IsReconnecting;
 	uint8_t ExponentialBackoff;
 	Binance::BinanceConfig BConfig;
+	const Symbol OwnSymbol;
 
 	std::weak_ptr<Binance::ReconnectManager> Manager;
 
 	void ReadMessage();
 
 public:
-	explicit CandlestickWebSocketClient(Binance::BinanceConfig bConfig, Net::ssl::context& sslContext)
+	explicit CandlestickWebSocketClient(Binance::BinanceConfig bConfig, Net::ssl::context& sslContext, const Symbol ownSymbol)
 		: SslContext(sslContext),
 		  Resolver(IoContext),
 		  WebSocket(std::make_unique<WebSocket::stream<Beast::ssl_stream<Beast::tcp_stream>>>(IoContext, sslContext)),
@@ -55,7 +57,8 @@ public:
 	      SteadyTimer(IoContext),
 	      IsReconnecting(false),
 	      ExponentialBackoff(0),
-	      BConfig(std::move(bConfig))
+	      BConfig(std::move(bConfig)),
+		  OwnSymbol(ownSymbol)
 	{
 	}
 
@@ -70,5 +73,4 @@ public:
 	void Reset() override;
 
 	void SetManager(const std::weak_ptr<Binance::ReconnectManager>& manager);
-
 };

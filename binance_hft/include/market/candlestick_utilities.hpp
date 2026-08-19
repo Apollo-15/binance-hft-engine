@@ -19,7 +19,8 @@ enum class Interval
 	Day1,
 	Day3,
 	Wk1,
-	Mon1
+	Mon1,
+	FinalBorder
 };
 
 inline std::string_view IntervalToString(const Interval interval)
@@ -63,6 +64,57 @@ inline std::string_view IntervalToString(const Interval interval)
 
 		case Interval::Mon1:
 			return "1M";
+
+		case Interval::FinalBorder:
+			return "";
+	}
+	__assume(false);
+}
+
+inline std::string_view IntervalToDisplayString(const Interval interval)
+{
+	switch (interval)
+	{
+	case Interval::Sec1:
+		return "1 Sec";
+
+	case Interval::Min1:
+		return "1 Min";
+	case Interval::Min3:
+		return "3 Mins";
+	case Interval::Min5:
+		return "5 Mins";
+	case Interval::Min15:
+		return "15 Mins";
+	case Interval::Min30:
+		return "30 Mins";
+
+	case Interval::Hr1:
+		return "1 Hour";
+	case Interval::Hr2:
+		return "2 Hours";
+	case Interval::Hr4:
+		return "4 Hours";
+	case Interval::Hr6:
+		return "6 Hours";
+	case Interval::Hr8:
+		return "8 Hours";
+	case Interval::Hr12:
+		return "12 Hours";
+
+	case Interval::Day1:
+		return "1 Day";
+	case Interval::Day3:
+		return "3 Days";
+
+	case Interval::Wk1:
+		return "1 Week";
+
+	case Interval::Mon1:
+		return "1 Month";
+
+	case Interval::FinalBorder:
+		return "";
 	}
 	__assume(false);
 }

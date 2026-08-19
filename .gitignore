@@ -366,3 +366,4 @@ FodyWeavers.xsd
 /binance_hft/include/config/config_private.json
 
 # 
+/binance_hft/portfolio.db

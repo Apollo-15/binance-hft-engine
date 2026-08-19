@@ -1,16 +1,19 @@
 #include "network/candlestick_websocket_client.hpp"
 
 #include <boost/beast/core/buffers_to_string.hpp>
+#include <ftxui/component/screen_interactive.hpp>
+#include <debugapi.h>
 
+#include "market/symbol_utilities.hpp"
 #include "market/candlestick_storage.hpp"
+#include "market/candlestick_websocket_path_builder.hpp"
 #include "parser/candlestick_parser.hpp"
-
 
 void CandlestickWebSocketClient::Connect()
 {
 	CurrentStatus = ConnectionStatus::Connecting;
 
-	if (IoThread.joinable())
+	if (IoThread.joinable() && IoContext.stopped())
 	{
 		IoContext.restart();
 	}
@@ -100,7 +103,7 @@ void CandlestickWebSocketClient::Connect()
 									if (ec)
 									{
 										self->CurrentStatus = ConnectionStatus::Error;
-										std::cout << "Handshake error: " << ec.message() << "\n";
+										std::cout << "Candlestick Handshake error: " << ec.message() << "\n";
 
 										auto lockedManager = self->Manager.lock();
 
@@ -137,19 +140,24 @@ void CandlestickWebSocketClient::Close()
 {
 	WebSocket->async_close(
 		WebSocket::close_code::normal,
-		[this](
+		[self = shared_from_this()](
 			boost::system::error_code ec
 			)
 		{
-			if (ec)
+			if (ec && ec != boost::asio::ssl::error::stream_truncated && ec != boost::asio::error::operation_aborted)
 			{
 				std::cerr << "Candlestick Close Error: " << ec.message();
 
 				return;
 			}
 
-			this->CurrentStatus = ConnectionStatus::Closed;
+			self->CurrentStatus = ConnectionStatus::Closed;
 			std::cout << "Connection closed!" << '\n';
+
+			self->BConfig.CWsPath = BuildCandlestickWebSocketPath(self->OwnSymbol);
+			OutputDebugStringA((self->BConfig.CWsPath + "\n").c_str());
+			self->Reset();
+			self->Connect();
 		}
 	);
 }
@@ -166,16 +174,20 @@ void CandlestickWebSocketClient::ReadMessage()
 		{
 			if (ec)
 			{
-				std::cout << "Reading error: " << ec.message() << "\n";
-
-				auto lockedManager = self->Manager.lock();
-
-				if (lockedManager == nullptr)
+				if (ec != boost::asio::error::operation_aborted)
 				{
-					return;
-				}
+					std::cout << "Candlestick Reading error: " << ec.message() << "\n";
 
-				lockedManager->StartReconnect();
+					auto lockedManager = self->Manager.lock();
+
+					if (lockedManager == nullptr)
+					{
+						return;
+					}
+
+					lockedManager->StartReconnect();
+
+				}
 
 				return;
 			}
@@ -187,7 +199,11 @@ void CandlestickWebSocketClient::ReadMessage()
 			const auto parsedData = JsonParser::ParseCandlestick(message);
 			if (parsedData)
 			{
-				CandlestickStorage::Instance().Upsert(parsedData->Interval, *parsedData);
+				CandlestickStorage::Instance().Upsert(parsedData->Interval, self->OwnSymbol, *parsedData);
+				if (ftxui::ScreenInteractive::Active() != nullptr)
+				{
+					ftxui::ScreenInteractive::Active()->RequestAnimationFrame();
+				}
 			}
 
 			self->ReadMessage();
