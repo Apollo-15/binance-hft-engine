@@ -8,6 +8,7 @@
 #include <../include/simdjson.h>
 #include <thread>
 #include <memory>
+#include <atomic>
 
 #include "boost/asio/steady_timer.hpp"
 #include "config/binance_config.hpp"
@@ -29,14 +30,16 @@ class CandlestickWebSocketClient
 	  public IWebSocketClient
 {
 private:
-	Net::io_context IoContext;
+	Net::io_context& IoContext;
 	Net::ssl::context& SslContext;
 	Tcp::resolver Resolver;
 	Beast::flat_buffer Buffer;
 	std::unique_ptr<WebSocket::stream<Beast::ssl_stream<Beast::tcp_stream>>> WebSocket;
 	OnDemand::parser Parser;
 	std::thread IoThread;
-	ConnectionStatus CurrentStatus { ConnectionStatus::Disconnected };
+	std::atomic<ConnectionStatus> CurrentStatus { ConnectionStatus::Disconnected };
+	std::string ErrorMessage;
+	mutable std::mutex Mutex;
 	std::mt19937 Range;
 	Net::steady_timer SteadyTimer;
 	bool IsReconnecting;
@@ -49,8 +52,9 @@ private:
 	void ReadMessage();
 
 public:
-	explicit CandlestickWebSocketClient(Binance::BinanceConfig bConfig, Net::ssl::context& sslContext, const Symbol ownSymbol)
-		: SslContext(sslContext),
+	explicit CandlestickWebSocketClient(Binance::BinanceConfig bConfig, Net::io_context& ioContext, Net::ssl::context& sslContext, const Symbol ownSymbol)
+		: IoContext(ioContext),
+		  SslContext(sslContext),
 		  Resolver(IoContext),
 		  WebSocket(std::make_unique<WebSocket::stream<Beast::ssl_stream<Beast::tcp_stream>>>(IoContext, sslContext)),
 	      Range(std::random_device{} ()),
@@ -62,11 +66,16 @@ public:
 	{
 	}
 
+
 	CandlestickWebSocketClient(const CandlestickWebSocketClient& other) = delete;
 	CandlestickWebSocketClient& operator=(const CandlestickWebSocketClient& other) = delete;
 
 	[[nodiscard]]
 	ConnectionStatus GetStatus() const;
+
+	[[nodiscard]]
+	std::string GetErrorMessage() const;
+	void SetErrorMessage(const std::string& errorMessage);
 
 	void Connect() override;
 	void Close();

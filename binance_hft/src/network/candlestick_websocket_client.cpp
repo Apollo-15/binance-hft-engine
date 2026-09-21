@@ -4,7 +4,6 @@
 #include <ftxui/component/screen_interactive.hpp>
 #include <debugapi.h>
 
-#include "market/symbol_utilities.hpp"
 #include "market/candlestick_storage.hpp"
 #include "market/candlestick_websocket_path_builder.hpp"
 #include "parser/candlestick_parser.hpp"
@@ -29,7 +28,7 @@ void CandlestickWebSocketClient::Connect()
 			if (ec)
 			{
 				self->CurrentStatus = ConnectionStatus::Error;
-				std::cout << "Resolve error: " << ec.message() << "\n";
+				self->SetErrorMessage("Resolve error: " + ec.message());
 
 				auto lockedManager = self->Manager.lock();
 
@@ -54,7 +53,7 @@ void CandlestickWebSocketClient::Connect()
 					if (ec)
 					{
 						self->CurrentStatus = ConnectionStatus::Error;
-						std::cout << "Connection error: " << ec.message() << "\n";
+						self->SetErrorMessage("Connection error: " + ec.message());
 
 						auto lockedManager = self->Manager.lock();
 
@@ -77,7 +76,7 @@ void CandlestickWebSocketClient::Connect()
 							if (ec)
 							{
 								self->CurrentStatus = ConnectionStatus::Error;
-								std::cout << "SSL Handshake error: " << ec.message() << "\n";
+								self->SetErrorMessage("SSL Handshake error: " + ec.message());
 
 								auto lockedManager = self->Manager.lock();
 
@@ -103,7 +102,7 @@ void CandlestickWebSocketClient::Connect()
 									if (ec)
 									{
 										self->CurrentStatus = ConnectionStatus::Error;
-										std::cout << "Candlestick Handshake error: " << ec.message() << "\n";
+										self->SetErrorMessage("Candlestick Handshake error: " + ec.message());
 
 										auto lockedManager = self->Manager.lock();
 
@@ -117,6 +116,7 @@ void CandlestickWebSocketClient::Connect()
 										return;
 									}
 
+									self->SetErrorMessage("");
 									self->CurrentStatus = ConnectionStatus::Connected;
 
 									self->ReadMessage();
@@ -146,12 +146,13 @@ void CandlestickWebSocketClient::Close()
 		{
 			if (ec && ec != boost::asio::ssl::error::stream_truncated && ec != boost::asio::error::operation_aborted)
 			{
-				std::cerr << "Candlestick Close Error: " << ec.message();
+				self->SetErrorMessage("Candlestick Close Error: " + ec.message());
 
 				return;
 			}
 
 			self->CurrentStatus = ConnectionStatus::Closed;
+			// TODO: move to Logs tab via spdlog once technical logging is implemented
 			std::cout << "Connection closed!" << '\n';
 
 			self->BConfig.CWsPath = BuildCandlestickWebSocketPath(self->OwnSymbol);
@@ -176,7 +177,7 @@ void CandlestickWebSocketClient::ReadMessage()
 			{
 				if (ec != boost::asio::error::operation_aborted)
 				{
-					std::cout << "Candlestick Reading error: " << ec.message() << "\n";
+					self->SetErrorMessage("Candlestick Reading error: " + ec.message());
 
 					auto lockedManager = self->Manager.lock();
 
@@ -224,4 +225,18 @@ ConnectionStatus CandlestickWebSocketClient::GetStatus() const
 void CandlestickWebSocketClient::SetManager(const std::weak_ptr<Binance::ReconnectManager>& manager)
 {
 	Manager = manager;
+}
+
+std::string CandlestickWebSocketClient::GetErrorMessage() const
+{
+	std::scoped_lock<std::mutex> lock(Mutex);
+
+	return ErrorMessage;
+}
+
+void CandlestickWebSocketClient::SetErrorMessage(const std::string& errorMessage)
+{
+	std::scoped_lock<std::mutex> lock(Mutex);
+
+	ErrorMessage = errorMessage;
 }

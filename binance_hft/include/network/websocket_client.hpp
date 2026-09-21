@@ -40,6 +40,9 @@ namespace Binance
 
 		std::atomic<ConnectionStatus> CurrentStatus{ ConnectionStatus::Disconnected };
 
+		std::string ErrorMessage;
+		mutable std::mutex Mutex;
+
 		TradeQueue<TradeEvent>& Event;
 
 		std::weak_ptr<ReconnectManager> Manager;
@@ -52,6 +55,10 @@ namespace Binance
 
 		[[nodiscard]]
 		ConnectionStatus GetStatus() const;
+
+		[[nodiscard]]
+		std::string GetErrorMessage() const;
+		void SetErrorMessage(const std::string& errorMessage);
 
 		void SetManager(const std::weak_ptr<ReconnectManager>& manager);
 

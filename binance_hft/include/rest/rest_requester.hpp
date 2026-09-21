@@ -52,5 +52,7 @@ namespace Binance
 		AccountInfo FetchAccountInfo();
 		FullResponse SendTransaction(const TransactionData& data);
 		std::vector<Candle> FetchHistoricalCandlesticks(Interval interval, Symbol symbol, const std::string& restHost);
+
+		unsigned CheckServerStatus(const std::string& restHost, Net::io_context& latencyIoContext);
 	};
 }

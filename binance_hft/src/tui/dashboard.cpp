@@ -11,6 +11,7 @@
 #include <limits>
 #include <algorithm>
 
+#include "models/rest_status.hpp"
 #include "tui/widgets/wheel_picker.hpp"
 
 void DashBoard::TuiStarter()
@@ -470,7 +471,63 @@ void DashBoard::TuiStarter()
 
 	auto connectionRenderer = ftxui::Renderer([&]
 		{
-			return ftxui::vbox(ftxui::text("Connection Status coming soon!"));
+			std::vector<ConnectionData> connectionStatus;
+			connectionStatus.reserve(symbolFinalBorder + 1);
+
+			for (int i = 0; i < symbolFinalBorder; i++)
+			{
+				connectionStatus.emplace_back(static_cast<std::string>(SymbolToDisplayString(static_cast<Symbol>(i))), CandlestickClientRef[i]->GetStatus(), CandlestickClientRef[i]->GetErrorMessage());
+			}
+
+			connectionStatus.emplace_back("Trade Client", ClientRef->GetStatus(), ClientRef->GetErrorMessage());
+			std::vector<ConnectionData>::iterator iterator = std::ranges::max_element(connectionStatus, [](const ConnectionData& left, const ConnectionData& right)
+				{
+					return left.ClientName.size() < right.ClientName.size();
+				});
+
+			const size_t maxLength = std::max(iterator->ClientName.size(), std::string("Database").size()) + 4;
+			std::vector<ftxui::Element> connectionElements;
+
+			for (const auto& connStatus : connectionStatus)
+			{
+				const size_t connectionPadding = maxLength - connStatus.ClientName.size();
+				std::string connectionStatusText = ConnectionStatusToDisplayString(connStatus.ClientStatus, connStatus.LastErrorMessage);
+
+				connectionElements.push_back(ftxui::hbox({ ftxui::text(connStatus.ClientName + std::string(connectionPadding, ' ')),
+								ftxui::separator(),
+								ftxui::text(connectionStatusText) | ftxui::color(ConnectionStatusToColor(connStatus.ClientStatus))
+					}) | ftxui::border
+				);
+			}
+
+			const size_t databasePadding = maxLength - std::string("Database").size();
+			const std::string databaseText = DataBaseRef.IsConnectionOpened() ? "Connected." : "Disconnected.";
+
+			const size_t internetPadding = maxLength - std::string("Internet").size();
+			const std::string internetText = InternetManagerRef.IsConnectedToInternet() ? "Connected." : "Disconnected.";
+
+			const size_t latencyPadding = maxLength - std::string("Latency").size();	
+			const std::string latencyText = std::to_string(LatencyManagerRef.GetLatency().count()) + "ms (code " + std::to_string(LatencyManagerRef.GetResultCode()) + ")";
+
+			connectionElements.push_back(ftxui::hbox({ ftxui::text("Database" + std::string(databasePadding, ' ')),
+							ftxui::separator(),
+							ftxui::text(databaseText) | ftxui::color(DataBaseRef.IsConnectionOpened() ? ftxui::Color::Green : ftxui::Color::Red),
+				}) | ftxui::border
+			);
+
+			connectionElements.push_back(ftxui::hbox({ ftxui::text("Internet" + std::string(internetPadding, ' ')),
+							ftxui::separator(),
+							ftxui::text(internetText) | ftxui::color(InternetManagerRef.IsConnectedToInternet() ? ftxui::Color::Green : ftxui::Color::Red),
+				}) | ftxui::border
+			);
+			
+			connectionElements.push_back(ftxui::hbox({ ftxui::text("Latency" + std::string(latencyPadding, ' ')),
+							ftxui::separator(),
+							ftxui::text(latencyText) | ftxui::color(RestStatusToColor(LatencyManagerRef.GetResultCode()))
+				}) | ftxui::border
+			);
+
+			return ftxui::vbox(connectionElements);
 		}
 	);
 
