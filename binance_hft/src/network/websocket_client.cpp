@@ -24,7 +24,7 @@ void Binance::WebSocketClient::Connect()
 			if (ec)
 			{
 				self->CurrentStatus = ConnectionStatus::Error;
-				std::cout << "Resolve error: " << ec.message() << "\n";
+				self->SetErrorMessage("WebSocket Resolve error: " + ec.message());
 
 				auto lockedManager = self->Manager.lock();
 
@@ -49,7 +49,7 @@ void Binance::WebSocketClient::Connect()
 					if (ec)
 					{
 						self->CurrentStatus = ConnectionStatus::Error;
-						std::cout << "Connection error: " << ec.message() << "\n";
+						self->SetErrorMessage("WebSocket Connection error: " + ec.message());
 
 						auto lockedManager = self->Manager.lock();
 
@@ -72,7 +72,7 @@ void Binance::WebSocketClient::Connect()
 							if (ec)
 							{
 								self->CurrentStatus = ConnectionStatus::Error;
-								std::cout << "SSL Handshake error: " << ec.message() << "\n";
+								self->SetErrorMessage("WebSocket SSL Handshake error: " + ec.message());
 
 								auto lockedManager = self->Manager.lock();
 
@@ -98,7 +98,7 @@ void Binance::WebSocketClient::Connect()
 									if (ec)
 									{
 										self->CurrentStatus = ConnectionStatus::Error;
-										std::cout << "Handshake error: " << ec.message() << "\n";
+										self->SetErrorMessage("WebSocket Handshake error: " + ec.message());
 
 										auto lockedManager = self->Manager.lock();
 
@@ -112,6 +112,7 @@ void Binance::WebSocketClient::Connect()
 										return;
 									}
 
+									self->SetErrorMessage("");
 									self->CurrentStatus = ConnectionStatus::Connected;
 
 									self->ReadMessage();
@@ -137,7 +138,7 @@ void Binance::WebSocketClient::ReadMessage()
 		{
 			if (ec)
 			{
-				std::cout << "Reading error: " << ec.message() << "\n";
+				self->SetErrorMessage("WebSocket Reading error: " + ec.message());
 
 				auto lockedManager = self->Manager.lock();
 
@@ -190,12 +191,13 @@ void Binance::WebSocketClient::Close()
 		{
 			if (ec)
 			{
-				std::cout << "Close error: " << ec.message() << "\n";
+				self->SetErrorMessage("WebSocket Close error: " + ec.message());
 
 				return;
 			}
 
 			self->CurrentStatus = ConnectionStatus::Closed;
+			// TODO: move to Logs tab via spdlog once technical logging is implemented
 			std::cout << "Connection closed!" << "\n";
 		}
 	);
@@ -214,4 +216,18 @@ ConnectionStatus Binance::WebSocketClient::GetStatus() const
 void Binance::WebSocketClient::SetManager(const std::weak_ptr<ReconnectManager>& manager)
 {
 	Manager = manager;
+}
+
+std::string Binance::WebSocketClient::GetErrorMessage() const
+{
+	std::scoped_lock<std::mutex> lock(Mutex);
+
+	return ErrorMessage;
+}
+
+void Binance::WebSocketClient::SetErrorMessage(const std::string& errorMessage)
+{
+	std::scoped_lock<std::mutex> lock(Mutex);
+
+	ErrorMessage = errorMessage;
 }

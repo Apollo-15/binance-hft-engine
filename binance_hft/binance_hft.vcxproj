@@ -111,6 +111,7 @@
     <Link>
       <SubSystem>Console</SubSystem>
       <GenerateDebugInformation>true</GenerateDebugInformation>
+      <AdditionalDependencies>Iphlpapi.lib;%(AdditionalDependencies)</AdditionalDependencies>
     </Link>
   </ItemDefinitionGroup>
   <ItemDefinitionGroup Condition="'$(Configuration)|$(Platform)'=='Release|x64'">
@@ -130,6 +131,7 @@
     <Link>
       <SubSystem>Console</SubSystem>
       <GenerateDebugInformation>true</GenerateDebugInformation>
+      <AdditionalDependencies>Iphlpapi.lib;%(AdditionalDependencies)</AdditionalDependencies>
     </Link>
   </ItemDefinitionGroup>
   <ItemGroup>
@@ -139,6 +141,8 @@
     <ClCompile Include="src\market\candlestick_storage.cpp" />
     <ClCompile Include="src\market\historical_candlestick_loader.cpp" />
     <ClCompile Include="src\network\candlestick_websocket_client.cpp" />
+    <ClCompile Include="src\network\internet_manager.cpp" />
+    <ClCompile Include="src\network\latency_manager.cpp" />
     <ClCompile Include="src\network\reconnect_manager.cpp" />
     <ClCompile Include="src\network\websocket_client.cpp" />
     <ClCompile Include="src\parser\account_parser.cpp" />
@@ -168,11 +172,14 @@
     <ClInclude Include="include\models\fill_info.hpp" />
     <ClInclude Include="include\models\full_response.hpp" />
     <ClInclude Include="include\models\position.hpp" />
+    <ClInclude Include="include\models\rest_status.hpp" />
     <ClInclude Include="include\models\trade_batch.hpp" />
     <ClInclude Include="include\models\trade_event.hpp" />
     <ClInclude Include="include\models\transaction_data.hpp" />
     <ClInclude Include="include\network\candlestick_websocket_client.hpp" />
+    <ClInclude Include="include\network\internet_manager.hpp" />
     <ClInclude Include="include\network\iwebsocket_client.hpp" />
+    <ClInclude Include="include\network\latency_manager.hpp" />
     <ClInclude Include="include\network\reconnect_manager.hpp" />
     <ClInclude Include="include\network\websocket_client.hpp" />
     <ClInclude Include="include\parser\account_parser.hpp" />

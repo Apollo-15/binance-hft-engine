@@ -12,12 +12,14 @@
 #include "market/candlestick_websocket_path_builder.hpp"
 #include "market/historical_candlestick_loader.hpp"
 #include "network/candlestick_websocket_client.hpp"
+#include "network/internet_manager.hpp"
+#include "network/latency_manager.hpp"
 #include "rest/rest_requester.hpp"
 #include "tui/dashboard.hpp"
 
 boost::asio::executor_work_guard<boost::asio::io_context::executor_type>* workGuard;
 
-void SignalHandler(int signal)
+static void SignalHandler(int signal)
 {
     if (workGuard != nullptr)
     {
@@ -37,15 +39,19 @@ int main()
     TradeQueue<TradeBatch> dbBatchQueue;
 	std::atomic<bool> bIsRunning = true;
     DataBase db;
+	InternetManager internetManager;
 	TransactionData transactionData;
 	std::array<std::shared_ptr<Binance::ReconnectManager>, static_cast<size_t>(Symbol::FinalBorder)> candlestickReconnectManager;
+
+	const unsigned int availableThreads = std::thread::hardware_concurrency();
+	const unsigned int threadPoolSize = availableThreads == 0 ? 4 : std::min(availableThreads, 4u);
 	
 	transactionData.Symbol = "BTCUSDT";
 	transactionData.Side = "BUY";
 	transactionData.Type = "MARKET";
 	transactionData.Quantity = 0.001;
 
-	auto binanceConfig = Binance::ReadConfig("include/config/config.json");
+	auto binanceConfig = Binance::ReadConfig("include/config/config_private.json");
 
     auto client = std::make_shared<Binance::WebSocketClient>(
 		binanceConfig.WsHost,
@@ -69,7 +75,7 @@ int main()
 		Binance::BinanceConfig symbolConfig = binanceConfig;
 		symbolConfig.CWsPath = BuildCandlestickWebSocketPath(currentSymbol);
 
-		candlestickClient[i] = std::make_shared<CandlestickWebSocketClient>(symbolConfig, sslContext, currentSymbol);
+		candlestickClient[i] = std::make_shared<CandlestickWebSocketClient>(symbolConfig, ioContext, sslContext, currentSymbol);
 		candlestickReconnectManager[i] = std::make_shared<Binance::ReconnectManager>(candlestickClient[i], ioContext, symbolConfig);
 
 		candlestickClient[i]->SetManager(candlestickReconnectManager[i]);
@@ -79,28 +85,42 @@ int main()
 	Binance::RestRequest newRequest(binanceConfig.ApiKey, binanceConfig.SecretKey, binanceConfig.TestnetRestHost, 
 		binanceConfig.RestPort, ioContext, sslContext);
 
+	LatencyManager latencyManager(newRequest, binanceConfig.RestHost);
+
 	AccountInfo accountInfo = newRequest.FetchAccountInfo();
 
 	LoadAllHistoricalCandlesticks(newRequest, binanceConfig.RestHost);
 
     auto reconnectManager = std::make_shared<Binance::ReconnectManager>(client, ioContext, binanceConfig);
+	
+	client->SetManager(reconnectManager);
+	client->Connect();
 
     db.OpenConnection("portfolio.db");
     db.CreatePortfolioTable();
     db.CreateBatchesTable();
     db.CreateTradesTable();
 
-    DashBoard dashBoard(Portfolio::Instance(12), db, tradeBuffer, accountInfo, candlestickClient);
+	internetManager.Connect();
+	latencyManager.StartMeasuringLatency();
+
+    DashBoard dashBoard(Portfolio::Instance(12), db, tradeBuffer, accountInfo, client, internetManager, latencyManager, candlestickClient);
 
     auto localGuard = Net::make_work_guard(ioContext);
     workGuard = &localGuard;
 
-    std::thread ioThread([](Net::io_context& ioContext)
-	    {
-			ioContext.run();
-	    }, 
-		std::ref(ioContext)
-	);
+	std::vector<std::thread> ioThreads;
+	ioThreads.reserve(threadPoolSize);
+
+    for (unsigned int i = 0; i < threadPoolSize; i++)
+    {
+	    ioThreads.emplace_back([](Net::io_context& ioContext)
+			{
+				ioContext.run();
+			},
+			std::ref(ioContext)
+		);
+    }
 
     std::thread portfolioThread([](TradeQueue<TradeEvent>& queue, std::atomic<bool>& bIsRunning, 
         TradeQueue<TradeEvent>& dbTradeQueue, TradeQueue<TradeBatch>& dbBatchQueue, TradeBuffer& tradeBuffer)
@@ -198,7 +218,11 @@ int main()
 		std::ref(transactionData)
 	);
 
-    ioThread.join();
+    for (auto& ioThread : ioThreads)
+    {
+		ioThread.join();
+    }
+
     bIsRunning = false;
     portfolioThread.join();
     dbThread.join();

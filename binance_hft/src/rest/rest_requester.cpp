@@ -215,3 +215,82 @@ std::vector<Candle> Binance::RestRequest::FetchHistoricalCandlesticks(Interval i
 		return std::vector<Candle>();
 	}
 }
+
+unsigned Binance::RestRequest::CheckServerStatus(const std::string& restHost, Net::io_context& latencyIoContext)
+{
+	unsigned resultCode = 0;
+
+	try
+	{
+		Beast::flat_buffer buffer;
+	
+		std::string target = "/api/v3/ping";
+		Tcp::resolver resolver(latencyIoContext);
+		Tcp::resolver::results_type type = resolver.resolve(restHost, Port);
+
+		auto httpRequest = Http::request<Http::empty_body>(Http::verb::get, target, 11);
+		auto httpResponse = Http::response<Http::basic_string_body<char>>();
+
+		auto webSocket = Net::ssl::stream<Beast::tcp_stream>(latencyIoContext, SslContext);
+
+		latencyIoContext.restart();
+
+		if (!SSL_set_tlsext_host_name(webSocket.native_handle(), restHost.c_str()))
+		{
+			throw(Beast::system_error(
+				static_cast<int>(::ERR_get_error()),
+				Net::error::get_ssl_category()));
+		}
+
+		Beast::get_lowest_layer(webSocket).expires_after(std::chrono::seconds(1));
+		Beast::get_lowest_layer(webSocket).async_connect(type, [&](Beast::error_code asyncConnectionErrorCode, Tcp::endpoint)
+             {
+                 if (asyncConnectionErrorCode)
+                 {
+                     return;
+                 }
+
+                 webSocket.async_handshake(Net::ssl::stream_base::client, [&](Beast::error_code handshakeErrorCode)
+                     {
+                         if (handshakeErrorCode)
+                         {
+                             return;
+                         }
+
+                         httpRequest.set(Http::field::host, restHost);
+                         httpRequest.keep_alive(false);
+
+                         Http::async_write(webSocket, httpRequest, [&](Beast::error_code asyncWrite, std::size_t)
+                             {
+                                 if (asyncWrite)
+                                 {
+                                     return;
+                                 }
+
+                                 Http::async_read(webSocket, buffer, httpResponse, [&](Beast::error_code asyncRead, std::size_t)
+                                     {
+                                         if (asyncRead)
+                                         {
+                                             return;
+                                         }
+
+                                         resultCode = httpResponse.result_int();
+                                     }
+                                 );
+                             }
+                         );
+                     }
+                 );
+             }
+		);
+
+		latencyIoContext.run();
+		
+	}
+	catch (const Beast::system_error& error)
+	{
+		std::cerr << error.what();
+	}
+
+	return resultCode;
+}

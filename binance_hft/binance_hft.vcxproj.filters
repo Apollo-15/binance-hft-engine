@@ -195,6 +195,15 @@
     <ClInclude Include="include\market\candlestick_websocket_path_builder.hpp">
       <Filter>include\market</Filter>
     </ClInclude>
+    <ClInclude Include="include\network\internet_manager.hpp">
+      <Filter>include\network</Filter>
+    </ClInclude>
+    <ClInclude Include="include\network\latency_manager.hpp">
+      <Filter>include\network</Filter>
+    </ClInclude>
+    <ClInclude Include="include\models\rest_status.hpp">
+      <Filter>include\models</Filter>
+    </ClInclude>
   </ItemGroup>
   <ItemGroup>
     <ClCompile Include="src\main.cpp">
@@ -253,6 +262,12 @@
     </ClCompile>
     <ClCompile Include="src\market\historical_candlestick_loader.cpp">
       <Filter>src\market</Filter>
+    </ClCompile>
+    <ClCompile Include="src\network\internet_manager.cpp">
+      <Filter>src\network</Filter>
+    </ClCompile>
+    <ClCompile Include="src\network\latency_manager.cpp">
+      <Filter>src\network</Filter>
     </ClCompile>
   </ItemGroup>
   <ItemGroup>
