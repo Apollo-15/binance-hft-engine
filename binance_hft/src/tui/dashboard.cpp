@@ -7,6 +7,7 @@
 #include "market/candlestick_storage.hpp"
 #include "network/websocket_client.hpp"
 #include "tui/decorators/square_separator.hpp"
+#include <spdlog/spdlog.h>
 
 #include <limits>
 #include <algorithm>
