@@ -1,11 +1,12 @@
 #include "parser/full_response_parser.hpp"
+
 #include "models/full_response.hpp"
 
 #include <../include/simdjson.h>
 
 namespace OnDemand = simdjson::ondemand;
 
-std::optional<FullResponse> JsonParser::ParseFullResponse(const std::string& json)
+std::optional<FullResponse> JsonParser::ParseFullResponse(const std::string& json, std::shared_ptr<spdlog::logger> technicalLogger)
 {
 	try
 	{
@@ -101,7 +102,8 @@ std::optional<FullResponse> JsonParser::ParseFullResponse(const std::string& jso
 	}
 	catch (const std::exception& ex)
 	{
-		std::cerr << "[Full Response Parser] Error happened: " << ex.what() << '\n';
+		technicalLogger->error("[Full Response Parser] An Error Occurred: {}", ex.what());
+
 		return std::nullopt;
 	}
 }

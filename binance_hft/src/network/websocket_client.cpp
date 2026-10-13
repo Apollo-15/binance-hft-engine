@@ -156,22 +156,18 @@ void Binance::WebSocketClient::ReadMessage()
 
 			self->Buffer.consume(self->Buffer.size());
 
-			auto parsedData = JsonParser::Parse(message);
+			auto parsedData = JsonParser::Parse(message, self->TechnicalLogger);
 
 			if (parsedData)
 			{
 				std::time_t time = parsedData->TradeTime / 1000;
 				std::tm localTime;
 
+#ifdef _WIN32
 				(void)localtime_s(&localTime, &time);
-				
-				/*std::cout << "Trade ID: " << parsedData->TradeId
-						  << " |Symbol: " << parsedData->Symbol 
-						  << " | Price: " << parsedData->Price
-				          << " | Quantity: " << std::fixed << std::setprecision(8) << parsedData->Quantity 
-						  << " | Time: " << std::put_time(&localTime, "%H:%M:%S")
-				          << "\n";
-					*/	  
+#else
+				(void)localtime_r(&time, &localTime);
+#endif
 
 				self->Event.Push(parsedData.value());
 			}
@@ -197,8 +193,7 @@ void Binance::WebSocketClient::Close()
 			}
 
 			self->CurrentStatus = ConnectionStatus::Closed;
-			// TODO: move to Logs tab via spdlog once technical logging is implemented
-			std::cout << "Connection closed!" << "\n";
+			self->TechnicalLogger->info("[Websocket Client] Connection Closed.");
 		}
 	);
 }

@@ -1,18 +1,19 @@
 #include "config/config_reader.hpp"
+
 #include <../include/simdjson.h>
 
 #include <fstream>
-#include <iostream>
 
 namespace OnDemand = simdjson::ondemand;
 
-Binance::BinanceConfig Binance::ReadConfig(const std::string& path)
+Binance::BinanceConfig Binance::ReadConfig(const std::string& path, std::shared_ptr<spdlog::logger> technicalLogger)
 {
 	std::ifstream inputFileStream(path, std::ios::binary);
 
 	if (!inputFileStream.is_open())
 	{
-		std::cout << "Failed to open " << path << '\n';
+		technicalLogger->error("[Config Reader] Failed to open config file.");
+
 		return BinanceConfig {};
 	}
 	else
@@ -67,7 +68,7 @@ Binance::BinanceConfig Binance::ReadConfig(const std::string& path)
 		}
 		catch (const std::exception& ex)
 		{
-			std::cerr << "Error happened: " << ex.what() << '\n';
+			technicalLogger->error("Error Happened: {}", ex.what());
 
 			return BinanceConfig {};
 		}

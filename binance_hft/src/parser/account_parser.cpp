@@ -1,4 +1,5 @@
 #include "parser/account_parser.hpp"
+
 #include "models/account_info.hpp"
 
 #include "../include/models/trade_event.hpp"
@@ -6,7 +7,7 @@
 
 namespace OnDemand = simdjson::ondemand;
 
-std::optional<AccountInfo> JsonParser::ParseAccount(const std::string& json)
+std::optional<AccountInfo> JsonParser::ParseAccount(const std::string& json, std::shared_ptr<spdlog::logger> technicalLogger)
 {
 	try
 	{
@@ -46,7 +47,7 @@ std::optional<AccountInfo> JsonParser::ParseAccount(const std::string& json)
 	}
 	catch (const std::exception& ex)
 	{
-		std::cerr << "[Account Parser] Error happened: " << ex.what() << '\n';
+		technicalLogger->error("[Account Parser] An Error Occurred: {}", ex.what());
 
 		return std::nullopt;
 	}

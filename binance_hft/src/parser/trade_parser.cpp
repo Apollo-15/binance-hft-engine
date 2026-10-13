@@ -1,10 +1,12 @@
 #include "parser/trade_parser.hpp"
+
 #include "../include/models/trade_event.hpp"
+
 #include <../include/simdjson.h>
 
 namespace OnDemand = simdjson::ondemand;
 
-std::optional<TradeEvent> JsonParser::Parse(const std::string& json)
+std::optional<TradeEvent> JsonParser::Parse(const std::string& json, std::shared_ptr<spdlog::logger> technicalLogger)
 {
 	try
 	{
@@ -30,7 +32,7 @@ std::optional<TradeEvent> JsonParser::Parse(const std::string& json)
 	}
 	catch (const std::exception& ex)
 	{
-		std::cerr << "[Trade Parser] Error happened: " << ex.what() << '\n';
+		technicalLogger->error("[Trade Parser] An Error Occurred: {}", ex.what());
 
 		return std::nullopt;
 	}

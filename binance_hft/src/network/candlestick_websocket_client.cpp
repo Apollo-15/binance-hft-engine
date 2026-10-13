@@ -2,7 +2,10 @@
 
 #include <boost/beast/core/buffers_to_string.hpp>
 #include <ftxui/component/screen_interactive.hpp>
+
+#ifdef _WIN32
 #include <debugapi.h>
+#endif
 
 #include "market/candlestick_storage.hpp"
 #include "market/candlestick_websocket_path_builder.hpp"
@@ -12,10 +15,10 @@ void CandlestickWebSocketClient::Connect()
 {
 	CurrentStatus = ConnectionStatus::Connecting;
 
-	if (IoThread.joinable() && IoContext.stopped())
-	{
-		IoContext.restart();
-	}
+	// if (IoThread.joinable() && IoContext.stopped())
+	// {
+	// 	IoContext.restart();
+	// }
 
 	Resolver.async_resolve(
 		BConfig.WsHost,
@@ -129,11 +132,10 @@ void CandlestickWebSocketClient::Connect()
 		}
 	);
 
-
-	if (!IoThread.joinable())
-	{
-		IoThread = std::thread([this] { IoContext.run(); });
-	}
+	// if (!IoThread.joinable())
+	// {
+	// 	IoThread = std::thread([this] { IoContext.run(); });
+	// }
 }
 
 void CandlestickWebSocketClient::Close()
@@ -152,11 +154,13 @@ void CandlestickWebSocketClient::Close()
 			}
 
 			self->CurrentStatus = ConnectionStatus::Closed;
-			// TODO: move to Logs tab via spdlog once technical logging is implemented
-			std::cout << "Connection closed!" << '\n';
+
+			self->TechnicalLogger->info("[Candlestick WebSocket] Connection closed");
 
 			self->BConfig.CWsPath = BuildCandlestickWebSocketPath(self->OwnSymbol);
-			OutputDebugStringA((self->BConfig.CWsPath + "\n").c_str());
+
+			self->TechnicalLogger->debug("[Candlestick WebSocket] Path: {}", self->BConfig.CWsPath);
+
 			self->Reset();
 			self->Connect();
 		}
@@ -197,7 +201,7 @@ void CandlestickWebSocketClient::ReadMessage()
 
 			self->Buffer.consume(self->Buffer.size());
 
-			const auto parsedData = JsonParser::ParseCandlestick(message);
+			const auto parsedData = JsonParser::ParseCandlestick(message, self->TechnicalLogger);
 			if (parsedData)
 			{
 				CandlestickStorage::Instance().Upsert(parsedData->Interval, self->OwnSymbol, *parsedData);

@@ -93,7 +93,11 @@ void DashBoard::TuiStarter()
 
 			std::time_t time = event.TradeTime / 1000;
 			std::tm localTime;
+#ifdef _WIN32
 			static_cast<void>(localtime_s(&localTime, &time));
+#else
+			static_cast<void>(localtime_r(&time, &localTime));
+#endif
 
 			std::ostringstream timeStream;
 			std::ostringstream priceStream;
@@ -386,7 +390,12 @@ void DashBoard::TuiStarter()
 				{
 					std::time_t time = static_cast<std::time_t>(intervalLabel.second) / 1000;
 					std::tm localTime;
+#ifdef _WIN32
 					static_cast<void>(localtime_s(&localTime, &time));
+#else
+					static_cast<void>(localtime_r(&time, &localTime));
+#endif
+
 					std::ostringstream timeStream;
 					timeStream << std::put_time(&localTime, dateFormat);
 					const int64_t centralizedLabel = static_cast<int64_t>(intervalLabel.first - timeStream.str().size() / 2);
@@ -441,8 +450,11 @@ void DashBoard::TuiStarter()
 
 			std::time_t time = event.TradeTime / 1000;
 			std::tm localTime;
+#ifdef _WIN32
 			(void)localtime_s(&localTime, &time);
-
+#else
+			(void)localtime_r(&time, &localTime);
+#endif
 			std::ostringstream timeStream;
 			std::ostringstream priceStream;
 			std::ostringstream quantityStream;

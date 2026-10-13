@@ -9,6 +9,7 @@
 #include "portfolio/portfolio.hpp"
 #include "strategy/trading_strategy.hpp"
 #include "database/database.hpp"
+#include "logger/logger_manager.hpp"
 #include "market/candlestick_websocket_path_builder.hpp"
 #include "market/historical_candlestick_loader.hpp"
 #include "network/candlestick_websocket_client.hpp"
@@ -42,27 +43,33 @@ int main()
 	InternetManager internetManager;
 	TransactionData transactionData;
 	std::array<std::shared_ptr<Binance::ReconnectManager>, static_cast<size_t>(Symbol::FinalBorder)> candlestickReconnectManager;
+	LoggerManager loggerManager("logs/tradeLogs", false, "logs/technicalLogs", true);
 
 	const unsigned int availableThreads = std::thread::hardware_concurrency();
 	const unsigned int threadPoolSize = availableThreads == 0 ? 4 : std::min(availableThreads, 4u);
-	
+
 	transactionData.Symbol = "BTCUSDT";
 	transactionData.Side = "BUY";
 	transactionData.Type = "MARKET";
 	transactionData.Quantity = 0.001;
 
-	auto binanceConfig = Binance::ReadConfig("include/config/config_private.json");
+	auto binanceConfig = Binance::ReadConfig("binance_hft/include/config/config_private.json", loggerManager.GetTechnicalLogger());
+
+	std::cout << "TestnetRestHost = [" << binanceConfig.TestnetRestHost << "]\n";
+	std::cout << "RestHost = [" << binanceConfig.RestHost << "]\n";
+	std::cout << "RestPort = [" << binanceConfig.RestPort << "]\n";
 
     auto client = std::make_shared<Binance::WebSocketClient>(
 		binanceConfig.WsHost,
 		binanceConfig.WsPort,
         ioContext,
         sslContext,
-        queue
+        queue,
+        loggerManager.GetTechnicalLogger()
         );
 
 	/*auto candlestickClient = std::make_shared<CandlestickWebSocketClient>(
-		binanceConfig, 
+		binanceConfig,
 		sslContext
 		);*/
 
@@ -75,15 +82,15 @@ int main()
 		Binance::BinanceConfig symbolConfig = binanceConfig;
 		symbolConfig.CWsPath = BuildCandlestickWebSocketPath(currentSymbol);
 
-		candlestickClient[i] = std::make_shared<CandlestickWebSocketClient>(symbolConfig, ioContext, sslContext, currentSymbol);
-		candlestickReconnectManager[i] = std::make_shared<Binance::ReconnectManager>(candlestickClient[i], ioContext, symbolConfig);
+		candlestickClient[i] = std::make_shared<CandlestickWebSocketClient>(symbolConfig, ioContext, sslContext, currentSymbol, loggerManager.GetTechnicalLogger());
+		candlestickReconnectManager[i] = std::make_shared<Binance::ReconnectManager>(candlestickClient[i], ioContext, symbolConfig, loggerManager.GetTechnicalLogger());
 
 		candlestickClient[i]->SetManager(candlestickReconnectManager[i]);
 		candlestickClient[i]->Connect();
 	}
 
-	Binance::RestRequest newRequest(binanceConfig.ApiKey, binanceConfig.SecretKey, binanceConfig.TestnetRestHost, 
-		binanceConfig.RestPort, ioContext, sslContext);
+	Binance::RestRequest newRequest(binanceConfig.ApiKey, binanceConfig.SecretKey, binanceConfig.TestnetRestHost,
+		binanceConfig.RestPort, ioContext, sslContext, loggerManager.GetTechnicalLogger());
 
 	LatencyManager latencyManager(newRequest, binanceConfig.RestHost);
 
@@ -91,8 +98,8 @@ int main()
 
 	LoadAllHistoricalCandlesticks(newRequest, binanceConfig.RestHost);
 
-    auto reconnectManager = std::make_shared<Binance::ReconnectManager>(client, ioContext, binanceConfig);
-	
+    auto reconnectManager = std::make_shared<Binance::ReconnectManager>(client, ioContext, binanceConfig, loggerManager.GetTechnicalLogger());
+
 	client->SetManager(reconnectManager);
 	client->Connect();
 
@@ -122,7 +129,7 @@ int main()
 		);
     }
 
-    std::thread portfolioThread([](TradeQueue<TradeEvent>& queue, std::atomic<bool>& bIsRunning, 
+    std::thread portfolioThread([](TradeQueue<TradeEvent>& queue, std::atomic<bool>& bIsRunning,
         TradeQueue<TradeEvent>& dbTradeQueue, TradeQueue<TradeBatch>& dbBatchQueue, TradeBuffer& tradeBuffer)
 	    {
 	        TradeEvent event;
@@ -144,7 +151,7 @@ int main()
 		                portfolio.UpdatePosition(newPosition);
 
 	                    bool isNewBatch = strategy.ProcessTrades(event);
-	                    
+
 	                    if (isNewBatch)
 	                    {
 	                        strategy.GetBack().BatchId = batchCounter++;
@@ -166,7 +173,7 @@ int main()
 		                }
 	                    dbTradeQueue.Push(event);
 						tradeBuffer.AddTrade(event);
-						
+
 						if (ftxui::ScreenInteractive::Active() != nullptr)
 						{
 							ftxui::ScreenInteractive::Active()->RequestAnimationFrame();
@@ -178,11 +185,11 @@ int main()
 	                std::this_thread::yield();
 	            }
 		    }
-	    }, 
+	    },
 		std::ref(queue), std::ref(bIsRunning), std::ref(dbTradeQueue), std::ref(dbBatchQueue), std::ref(tradeBuffer)
 	);
 
-    std::thread dbThread([](std::atomic<bool>& bIsRunning, TradeQueue<TradeEvent>& dbTradeQueue, 
+    std::thread dbThread([](std::atomic<bool>& bIsRunning, TradeQueue<TradeEvent>& dbTradeQueue,
         TradeQueue<TradeBatch>& dbBatchQueue, DataBase& db)
 	    {
 	        TradeEvent event;
@@ -201,7 +208,7 @@ int main()
 	                db.SaveBatch(batch);
 	            }
 	        }
-	    }, 
+	    },
         std::ref(bIsRunning), std::ref(dbTradeQueue), std::ref(dbBatchQueue), std::ref(db)
     );
 

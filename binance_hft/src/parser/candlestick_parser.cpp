@@ -5,7 +5,7 @@
 
 namespace OnDemand = simdjson::ondemand;
 
-std::optional<Candle> JsonParser::ParseCandlestick(const std::string& json)
+std::optional<Candle> JsonParser::ParseCandlestick(const std::string& json, std::shared_ptr<spdlog::logger> technicalLogger)
 {
 	try
 	{
@@ -43,12 +43,13 @@ std::optional<Candle> JsonParser::ParseCandlestick(const std::string& json)
 	}
 	catch (const std::exception& ex)
 	{
-		std::cerr << "[Candlestick Parser] Error happened: " << ex.what() << '\n';
+		technicalLogger->error("[Candlestick Parser] Error happened: {}", ex.what());
+
 		return std::nullopt;
 	}
 }
 
-std::optional<std::vector<Candle>> JsonParser::ParseHistoricalCandlestick(const std::string& json, Interval interval)
+std::optional<std::vector<Candle>> JsonParser::ParseHistoricalCandlestick(const std::string& json, Interval interval, std::shared_ptr<spdlog::logger> technicalLogger)
 {
 	try
 	{
@@ -130,7 +131,8 @@ std::optional<std::vector<Candle>> JsonParser::ParseHistoricalCandlestick(const 
 	}
 	catch (const std::exception& ex)
 	{
-		std::cerr << "[Historical Candlestick Parser] Error happened: " << ex.what() << '\n';
+		technicalLogger->error("[Historical Candlestick Parser] An Error Occurred: {}", ex.what());
+
 		return std::nullopt;
 	}
 }

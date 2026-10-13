@@ -3,6 +3,7 @@
 #include <iostream>
 #include <boost/beast/core/tcp_stream.hpp>
 #include <openssl/hmac.h>
+#include <iomanip>
 
 #include "parser/account_parser.hpp"
 #include "parser/candlestick_parser.hpp"
@@ -64,7 +65,7 @@ AccountInfo Binance::RestRequest::FetchAccountInfo()
 
 	httpResponse.body();
 
-	std::optional <AccountInfo> info = JsonParser::ParseAccount(httpResponse.body());
+	std::optional <AccountInfo> info = JsonParser::ParseAccount(httpResponse.body(), TechnicalLogger);
 
 	if (info.has_value())
 	{
@@ -135,37 +136,11 @@ FullResponse Binance::RestRequest::SendTransaction(const TransactionData& data)
 	Http::write(webSocket, httpRequest);
 	auto httpResponse = Http::response<Http::basic_string_body<char>>();
 	Http::read(webSocket, buffer, httpResponse);
-	//std::cout << httpResponse.body() << '\n';
 
-	std::optional <FullResponse> info = JsonParser::ParseFullResponse(httpResponse.body());
+	std::optional <FullResponse> info = JsonParser::ParseFullResponse(httpResponse.body(), TechnicalLogger);
 
 	if (info.has_value())
 	{
-		/*std::cout << "Symbol: " << info->Symbol
-			<< " | OrderId: " << info->OrderId
-			<< " | OrderListId: " << info->OrderListId
-			<< " | ClientOrderId: " << info->ClientOrderId
-			<< " | TransactionTime: " << info->TransactionTime
-			<< " | Price: " << info->Price
-			<< " | OriginalQuantity: " << info->OriginalQuantity
-			<< " | ExecutedQuantity: " << info->ExecutedQuantity
-			<< " | OriginalQuoteOrderQuantity: " << info->OriginalQuoteOrderQuantity
-			<< " | CumulativeQuoteQuantity: " << info->CumulativeQuoteQuantity
-			<< " | Status: " << info->Status
-			<< " | TimeInForce: " << info->TimeInForce
-			<< " | Type: " << info->Type
-			<< " | Side: " << info->Side
-			<< " | WorkingTime: " << info->WorkingTime
-			<< " | SelfTradePreventionMode: " << info->SelfTradePreventionMode << '\n';
-
-		for (auto fill : info->Fills)
-		{
-			std::cout << "Price: " << fill.Price
-				<< " | Quantity: " << fill.Quantity
-				<< " | Commission: " << fill.Commission
-				<< " | CommissionAsset: " << fill.CommissionAsset
-				<< " | TradeId: " << fill.TradeId << '\n';
-		}*/
 
 		return info.value();
 	}
@@ -204,7 +179,7 @@ std::vector<Candle> Binance::RestRequest::FetchHistoricalCandlesticks(Interval i
 	auto httpResponse = Http::response<Http::basic_string_body<char>>();
 	Http::read(webSocket, buffer, httpResponse);
 
-	std::optional<std::vector<Candle>> info = JsonParser::ParseHistoricalCandlestick(httpResponse.body(), interval);
+	std::optional<std::vector<Candle>> info = JsonParser::ParseHistoricalCandlestick(httpResponse.body(), interval, TechnicalLogger);
 
 	if (info.has_value())
 	{
@@ -289,7 +264,7 @@ unsigned Binance::RestRequest::CheckServerStatus(const std::string& restHost, Ne
 	}
 	catch (const Beast::system_error& error)
 	{
-		std::cerr << error.what();
+		TechnicalLogger->error("[REST Requester] An Error Occurred: {}", error.what());
 	}
 
 	return resultCode;

@@ -2,6 +2,7 @@
 
 #include <random>
 #include <memory>
+#include <spdlog/logger.h>
 
 #include "iwebsocket_client.hpp"
 #include "boost/asio/steady_timer.hpp"
@@ -21,8 +22,11 @@ namespace Binance
 		boost::asio::io_context& IoContext;
 		BinanceConfig BConfig;
 
+		std::shared_ptr<spdlog::logger> TechnicalLogger;
+
 	public:
-		explicit ReconnectManager(std::weak_ptr<IWebSocketClient> socket, boost::asio::io_context& ioContext, BinanceConfig bConfig)
+		explicit ReconnectManager(std::weak_ptr<IWebSocketClient> socket, boost::asio::io_context& ioContext, BinanceConfig bConfig,
+			std::shared_ptr<spdlog::logger> technicalLogger)
 			: Range(std::random_device {} ()),
 			  SteadyTimer(ioContext),
 			  IsReconnecting(false),
@@ -30,8 +34,8 @@ namespace Binance
 			  Socket(std::move(socket)),
 			  ExponentialBackoff(0),
 			  IoContext(ioContext),
-		      BConfig(std::move(bConfig))
-
+		      BConfig(std::move(bConfig)),
+			  TechnicalLogger(std::move(technicalLogger))
 		{
 		}
 

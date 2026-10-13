@@ -2,7 +2,7 @@
 
 #include <cstdint>
 
-#include "market/candlestick_utilities.hpp"
+	#include "market/candlestick_utilities.hpp"
 
 struct Candle
 {
@@ -15,5 +15,5 @@ struct Candle
 	uint64_t NumberOfTrades;    // "n"
 	bool IsCandlestickClosed;  // "x"
 	uint64_t CandlestickCloseTime;
-	Interval Interval;
+	::Interval Interval;
 };

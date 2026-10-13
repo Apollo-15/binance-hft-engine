@@ -1,9 +1,14 @@
 #include "network/internet_manager.hpp"
 #include "network/candlestick_websocket_client.hpp"
 
+#ifdef _WIN32
 #include <IPExport.h>
 #include <windows.h>
 #include <icmpapi.h>
+#else
+#include <cstdlib>
+#endif
+
 #include <chrono>
 #include <ftxui/component/screen_interactive.hpp>
 
@@ -18,6 +23,7 @@ InternetManager::~InternetManager()
 
 bool InternetManager::SendPing(const std::string& ipAddress)
 {
+#ifdef _WIN32
 	IPAddr destinationAddress;
 	const HANDLE icmpHandle = IcmpCreateFile();
 	const int conversionResult = inet_pton(AF_INET, ipAddress.c_str(), &destinationAddress);
@@ -49,6 +55,10 @@ bool InternetManager::SendPing(const std::string& ipAddress)
 
 	IcmpCloseHandle(icmpHandle);
 	return pingResult > 0;
+#else
+	const std::string  command = "ping -c 1 -w 1 " + ipAddress + " > /dev/null 2>&1";
+	return std::system(command.c_str()) == 0;
+#endif
 }
 
 bool InternetManager::CheckConnection()

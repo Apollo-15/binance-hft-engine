@@ -43,7 +43,8 @@ void Binance::ReconnectManager::StartReconnect()
 		if (ec)
 		{
 			IsReconnecting = false;
-			std::cerr << "An error occured: " << ec.message() << '\n';
+
+			TechnicalLogger->error("[Reconnect Manager] An Error Occurred: {}", ec.message());
 		}
 		else
 		{
