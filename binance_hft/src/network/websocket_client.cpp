@@ -24,7 +24,8 @@ void Binance::WebSocketClient::Connect()
 			if (ec)
 			{
 				self->CurrentStatus = ConnectionStatus::Error;
-				self->SetErrorMessage("WebSocket Resolve error: " + ec.message());
+				self->SetErrorMessage("A WebSocket Resolve Error Occurred: " + ec.message());
+				self->TechnicalLogger->error("[WebSocket Client] A WebSocket Resolve Error Occurred: {}", ec.message());
 
 				auto lockedManager = self->Manager.lock();
 
@@ -49,7 +50,8 @@ void Binance::WebSocketClient::Connect()
 					if (ec)
 					{
 						self->CurrentStatus = ConnectionStatus::Error;
-						self->SetErrorMessage("WebSocket Connection error: " + ec.message());
+						self->SetErrorMessage("A WebSocket Connection Error Occurred: " + ec.message());
+						self->TechnicalLogger->error("[WebSocket Client] A WebSocket Connection Error Occurred: {}", ec.message());
 
 						auto lockedManager = self->Manager.lock();
 
@@ -72,7 +74,8 @@ void Binance::WebSocketClient::Connect()
 							if (ec)
 							{
 								self->CurrentStatus = ConnectionStatus::Error;
-								self->SetErrorMessage("WebSocket SSL Handshake error: " + ec.message());
+								self->SetErrorMessage("A WebSocket SSL Handshake Error Occurred: " + ec.message());
+								self->TechnicalLogger->error("[WebSocket Client] A WebSocket SSL Handshake Error Occurred: {}", ec.message());
 
 								auto lockedManager = self->Manager.lock();
 
@@ -88,6 +91,12 @@ void Binance::WebSocketClient::Connect()
 
 							Beast::get_lowest_layer(*self->WebSocket).expires_never();
 
+						    WebSocket::stream_base::timeout timeoutOptions;
+						    timeoutOptions.handshake_timeout = std::chrono::seconds(15);
+						    timeoutOptions.idle_timeout = std::chrono::seconds(30);
+						    timeoutOptions.keep_alive_pings = true;
+                            self->WebSocket->set_option(timeoutOptions);
+
 							self->WebSocket->async_handshake(
 								self->Host,
 								"/ws/btcusdt@trade",
@@ -98,7 +107,8 @@ void Binance::WebSocketClient::Connect()
 									if (ec)
 									{
 										self->CurrentStatus = ConnectionStatus::Error;
-										self->SetErrorMessage("WebSocket Handshake error: " + ec.message());
+										self->SetErrorMessage("A WebSocket Handshake Error Occurred: " + ec.message());
+										self->TechnicalLogger->error("[WebSocket Client] A WebSocket Handshake Error Occurred: {}", ec.message());
 
 										auto lockedManager = self->Manager.lock();
 
@@ -114,6 +124,7 @@ void Binance::WebSocketClient::Connect()
 
 									self->SetErrorMessage("");
 									self->CurrentStatus = ConnectionStatus::Connected;
+									self->TechnicalLogger->info("[WebSocket Client] Connection Established.");
 
 									self->ReadMessage();
 								}
@@ -138,7 +149,8 @@ void Binance::WebSocketClient::ReadMessage()
 		{
 			if (ec)
 			{
-				self->SetErrorMessage("WebSocket Reading error: " + ec.message());
+				self->SetErrorMessage("A WebSocket Reading Error Occurred: " + ec.message());
+				self->TechnicalLogger->error("[WebSocket Client] A WebSocket Reading Error Occurred: {}", ec.message());
 
 				auto lockedManager = self->Manager.lock();
 
@@ -163,12 +175,6 @@ void Binance::WebSocketClient::ReadMessage()
 				std::time_t time = parsedData->TradeTime / 1000;
 				std::tm localTime;
 
-#ifdef _WIN32
-				(void)localtime_s(&localTime, &time);
-#else
-				(void)localtime_r(&time, &localTime);
-#endif
-
 				self->Event.Push(parsedData.value());
 			}
 
@@ -187,13 +193,14 @@ void Binance::WebSocketClient::Close()
 		{
 			if (ec)
 			{
-				self->SetErrorMessage("WebSocket Close error: " + ec.message());
+				self->SetErrorMessage("A WebSocket Close Error Occurred: " + ec.message());
+				self->TechnicalLogger->error("[WebSocket Client] A WebSocket Close Error Occurred: {}", ec.message());
 
 				return;
 			}
 
 			self->CurrentStatus = ConnectionStatus::Closed;
-			self->TechnicalLogger->info("[Websocket Client] Connection Closed.");
+			self->TechnicalLogger->info("[WebSocket Client] Connection Closed.");
 		}
 	);
 }

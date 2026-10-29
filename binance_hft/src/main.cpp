@@ -43,7 +43,14 @@ int main()
 	InternetManager internetManager;
 	TransactionData transactionData;
 	std::array<std::shared_ptr<Binance::ReconnectManager>, static_cast<size_t>(Symbol::FinalBorder)> candlestickReconnectManager;
-	LoggerManager loggerManager("logs/tradeLogs", false, "logs/technicalLogs", true);
+
+    std::string tradeLogsPath = "logs/tradeLogs.log";
+    std::string technicalLogsPath = "logs/technicalLogs.log";
+	LoggerManager loggerManager(tradeLogsPath, false, technicalLogsPath, true);
+    LoggerReader tradeLoggerReader(tradeLogsPath, 1000, loggerManager.GetTechnicalLogger());
+    LoggerReader technicalLoggerReader(technicalLogsPath, 1000, loggerManager.GetTechnicalLogger());
+    tradeLoggerReader.Start();
+    technicalLoggerReader.Start();
 
 	const unsigned int availableThreads = std::thread::hardware_concurrency();
 	const unsigned int threadPoolSize = availableThreads == 0 ? 4 : std::min(availableThreads, 4u);
@@ -55,10 +62,6 @@ int main()
 
 	auto binanceConfig = Binance::ReadConfig("binance_hft/include/config/config_private.json", loggerManager.GetTechnicalLogger());
 
-	std::cout << "TestnetRestHost = [" << binanceConfig.TestnetRestHost << "]\n";
-	std::cout << "RestHost = [" << binanceConfig.RestHost << "]\n";
-	std::cout << "RestPort = [" << binanceConfig.RestPort << "]\n";
-
     auto client = std::make_shared<Binance::WebSocketClient>(
 		binanceConfig.WsHost,
 		binanceConfig.WsPort,
@@ -68,16 +71,11 @@ int main()
         loggerManager.GetTechnicalLogger()
         );
 
-	/*auto candlestickClient = std::make_shared<CandlestickWebSocketClient>(
-		binanceConfig,
-		sslContext
-		);*/
-
 	std::array<std::shared_ptr<CandlestickWebSocketClient>, static_cast<size_t>(Symbol::FinalBorder)> candlestickClient;
 
 	for	(int i = 0; i < static_cast<int>(Symbol::FinalBorder); i++)
 	{
-		Symbol currentSymbol = static_cast<Symbol>(i);
+		auto currentSymbol = static_cast<Symbol>(i);
 
 		Binance::BinanceConfig symbolConfig = binanceConfig;
 		symbolConfig.CWsPath = BuildCandlestickWebSocketPath(currentSymbol);
@@ -90,13 +88,14 @@ int main()
 	}
 
 	Binance::RestRequest newRequest(binanceConfig.ApiKey, binanceConfig.SecretKey, binanceConfig.TestnetRestHost,
-		binanceConfig.RestPort, ioContext, sslContext, loggerManager.GetTechnicalLogger());
+		binanceConfig.RestPort, ioContext, sslContext, loggerManager.GetTechnicalLogger(), loggerManager.GetTradeLogger());
 
 	LatencyManager latencyManager(newRequest, binanceConfig.RestHost);
 
 	AccountInfo accountInfo = newRequest.FetchAccountInfo();
 
-	LoadAllHistoricalCandlesticks(newRequest, binanceConfig.RestHost);
+    HistoricalCandlestickLoader historicalCandlestickLoader(newRequest, binanceConfig.RestHost);
+    historicalCandlestickLoader.Start();
 
     auto reconnectManager = std::make_shared<Binance::ReconnectManager>(client, ioContext, binanceConfig, loggerManager.GetTechnicalLogger());
 
@@ -109,9 +108,11 @@ int main()
     db.CreateTradesTable();
 
 	internetManager.Connect();
+
 	latencyManager.StartMeasuringLatency();
 
-    DashBoard dashBoard(Portfolio::Instance(12), db, tradeBuffer, accountInfo, client, internetManager, latencyManager, candlestickClient);
+    DashBoard dashBoard(Portfolio::Instance(12), db, tradeBuffer, accountInfo, client, internetManager,
+        latencyManager, candlestickClient, tradeLoggerReader, technicalLoggerReader, loggerManager.GetTechnicalLogger());
 
     auto localGuard = Net::make_work_guard(ioContext);
     workGuard = &localGuard;
@@ -129,8 +130,8 @@ int main()
 		);
     }
 
-    std::thread portfolioThread([](TradeQueue<TradeEvent>& queue, std::atomic<bool>& bIsRunning,
-        TradeQueue<TradeEvent>& dbTradeQueue, TradeQueue<TradeBatch>& dbBatchQueue, TradeBuffer& tradeBuffer)
+    std::thread portfolioThread([](TradeQueue<TradeEvent>& queue, const std::atomic<bool>& bIsRunning,
+        TradeQueue<TradeEvent>& dbTradeQueue, TradeQueue<TradeBatch>& dbBatchQueue, TradeBuffer& tradeBuffer, std::shared_ptr<spdlog::logger> tradeLogger)
 	    {
 	        TradeEvent event;
 	        auto& portfolio = Portfolio::Instance(50000.0);
@@ -156,6 +157,10 @@ int main()
 	                    {
 	                        strategy.GetBack().BatchId = batchCounter++;
 	                        dbBatchQueue.Push(strategy.GetBack());
+
+	                    	tradeLogger->info("[BATCH_OPENED] BatchId={} | Symbol={} | Price={} | Quantity={} | Position={} | TradeTime={} | TradeId={}",
+	                    			strategy.GetBack().BatchId, event.Symbol, event.Price, event.Quantity, portfolio.GetPosition(), event.TradeTime, event.TradeId
+	                    		);
 	                    }
 
 		                if (std::optional<TradeBatch> savedBatch = strategy.ShouldSell(event.Price))
@@ -167,9 +172,12 @@ int main()
 	                        portfolio.UpdatePosition(finalPosition);
 
 	                        savedBatch->PnL = (finalBalance - newBalance) / newBalance * 100;
-	                        savedBatch->BatchId = batchCounter++;
 
 	                        dbBatchQueue.Push(*savedBatch);
+
+		                	tradeLogger->info("[BATCH_CLOSED] BatchId={} | Symbol={} | Price={} | Quantity={} | Position={} | PnL={} | TradeTime={} | TradeId={}",
+		                			savedBatch->BatchId, event.Symbol, event.Price, event.Quantity, portfolio.GetPosition(), savedBatch->PnL, event.TradeTime, event.TradeId
+		                		);
 		                }
 	                    dbTradeQueue.Push(event);
 						tradeBuffer.AddTrade(event);
@@ -186,10 +194,10 @@ int main()
 	            }
 		    }
 	    },
-		std::ref(queue), std::ref(bIsRunning), std::ref(dbTradeQueue), std::ref(dbBatchQueue), std::ref(tradeBuffer)
+		std::ref(queue), std::ref(bIsRunning), std::ref(dbTradeQueue), std::ref(dbBatchQueue), std::ref(tradeBuffer), loggerManager.GetTradeLogger()
 	);
 
-    std::thread dbThread([](std::atomic<bool>& bIsRunning, TradeQueue<TradeEvent>& dbTradeQueue,
+    std::thread dbThread([](const std::atomic<bool>& bIsRunning, TradeQueue<TradeEvent>& dbTradeQueue,
         TradeQueue<TradeBatch>& dbBatchQueue, DataBase& db)
 	    {
 	        TradeEvent event;

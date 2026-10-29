@@ -7,7 +7,7 @@ LoggerManager::LoggerManager(const std::string& tradeFilePath, bool truncateTrad
 {
     const auto tradeSink = std::make_shared<spdlog::sinks::basic_file_sink_mt>(tradeFilePath, truncateTradeFile);
     const auto technicalSink = std::make_shared<spdlog::sinks::basic_file_sink_mt>(technicalFilePath, truncateTechnicalFile);
-    const std::string patternString = "[%Y-%m-%d %H:%M:%S] [%l] %v";
+    const std::string patternString = "[%m/%d/%Y %I:%M %p] [%l] %v";
 
     TradeLogger = std::make_shared<spdlog::logger>("Trade Logger", tradeSink);
     TechnicalLogger = std::make_shared<spdlog::logger>("Technical Logger", technicalSink);

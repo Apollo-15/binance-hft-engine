@@ -7,7 +7,7 @@
 
 namespace OnDemand = simdjson::ondemand;
 
-std::optional<AccountInfo> JsonParser::ParseAccount(const std::string& json, std::shared_ptr<spdlog::logger> technicalLogger)
+std::optional<AccountInfo> JsonParser::ParseAccount(const std::string& json, const std::shared_ptr<spdlog::logger>& technicalLogger)
 {
 	try
 	{

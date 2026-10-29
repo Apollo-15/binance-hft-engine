@@ -17,7 +17,7 @@ private:
 	ftxui::Box RightBox;
 
 public:
-	WheelPicker(std::vector<std::string>* const entries, int* const selected)
+	explicit WheelPicker(std::vector<std::string>* const entries, int* const selected)
 		: Entries(entries),
 		  Selected(selected)
 	{

@@ -6,7 +6,7 @@
 
 namespace OnDemand = simdjson::ondemand;
 
-std::optional<FullResponse> JsonParser::ParseFullResponse(const std::string& json, std::shared_ptr<spdlog::logger> technicalLogger)
+std::optional<FullResponse> JsonParser::ParseFullResponse(const std::string& json, const std::shared_ptr<spdlog::logger>& technicalLogger)
 {
 	try
 	{

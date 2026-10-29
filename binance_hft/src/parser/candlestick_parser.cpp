@@ -5,7 +5,7 @@
 
 namespace OnDemand = simdjson::ondemand;
 
-std::optional<Candle> JsonParser::ParseCandlestick(const std::string& json, std::shared_ptr<spdlog::logger> technicalLogger)
+std::optional<Candle> JsonParser::ParseCandlestick(const std::string& json, const std::shared_ptr<spdlog::logger>& technicalLogger)
 {
 	try
 	{
@@ -49,7 +49,7 @@ std::optional<Candle> JsonParser::ParseCandlestick(const std::string& json, std:
 	}
 }
 
-std::optional<std::vector<Candle>> JsonParser::ParseHistoricalCandlestick(const std::string& json, Interval interval, std::shared_ptr<spdlog::logger> technicalLogger)
+std::optional<std::vector<Candle>> JsonParser::ParseHistoricalCandlestick(const std::string& json, Interval interval, const std::shared_ptr<spdlog::logger>& technicalLogger)
 {
 	try
 	{

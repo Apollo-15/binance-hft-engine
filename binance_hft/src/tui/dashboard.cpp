@@ -5,15 +5,15 @@
 #include "ftxui/component/component.hpp"  // for Checkbox,Radiobox, Renderer, Tab, Toggle, Vertical
 #include "market/symbol_utilities.hpp"
 #include "market/candlestick_storage.hpp"
+#include "models/rest_status.hpp"
 #include "network/websocket_client.hpp"
 #include "tui/decorators/square_separator.hpp"
-#include <spdlog/spdlog.h>
+#include "tui/widgets/wheel_picker.hpp"
+#include "tui/widgets/logs_viewer.hpp"
 
+#include <spdlog/spdlog.h>
 #include <limits>
 #include <algorithm>
-
-#include "models/rest_status.hpp"
-#include "tui/widgets/wheel_picker.hpp"
 
 void DashBoard::TuiStarter()
 {
@@ -21,9 +21,11 @@ void DashBoard::TuiStarter()
 
 	int intervalSelected = 0;
 	int symbolSelected = 0;
+    int logsSelected = 0;
 
 	std::vector<std::string> intervalEntries;
 	std::vector<std::string> symbolEntries;
+    std::vector<std::string> logsEntries({"Trade Logs", "Technical Logs"});
 
 	constexpr auto intervalFinalBorder = static_cast<int>(Interval::FinalBorder);
 	constexpr auto symbolFinalBorder = static_cast<int>(Symbol::FinalBorder);
@@ -33,12 +35,12 @@ void DashBoard::TuiStarter()
 
 	for (int i = 0; i < intervalFinalBorder; i++)
 	{
-		intervalEntries.push_back(static_cast<std::string>(IntervalToDisplayString(static_cast<Interval>(i))));
+		intervalEntries.emplace_back(static_cast<std::string>(IntervalToDisplayString(static_cast<Interval>(i))));
 	}
 
 	for (int i = 0; i < symbolFinalBorder; i++)
 	{
-		symbolEntries.push_back(static_cast<std::string>(SymbolToDisplayString(static_cast<Symbol>(i))));
+		symbolEntries.emplace_back(static_cast<std::string>(SymbolToDisplayString(static_cast<Symbol>(i))));
 	}
 
 	const std::vector<std::string> tabNames
@@ -53,8 +55,10 @@ void DashBoard::TuiStarter()
 
 	ftxui::Component intervalWheelPicker = MakeWheelPicker(&intervalEntries, &intervalSelected);
 	ftxui::Component symbolWheelPicker = MakeWheelPicker(&symbolEntries, &symbolSelected);
+    ftxui::Component logsWheelPicker = MakeWheelPicker(&logsEntries, &logsSelected);
+    ftxui::Component logsViewer = MakeLogsViewer(TradeLoggerReaderRef, TechnicalLoggerReaderRef, &logsSelected, ([&]{return screen.dimy();}));
 
-	ftxui::Component buttonHandler = ftxui::Renderer(ftxui::Container::Horizontal({ intervalWheelPicker, symbolWheelPicker }), [&]
+	ftxui::Component candleStickTabButtonHandler = ftxui::Renderer(ftxui::Container::Horizontal({ intervalWheelPicker, symbolWheelPicker }), [&]
 		{
 			return ftxui::hbox({
 				intervalWheelPicker->Render(),
@@ -63,10 +67,19 @@ void DashBoard::TuiStarter()
 				});
 		});
 
+    ftxui::Component logsTabButtonHandler = ftxui::Renderer(logsWheelPicker, [&]
+        {
+            return ftxui::hbox({
+                ftxui::filler(),
+                logsWheelPicker->Render(),
+                ftxui::filler()
+            });
+        });
+
 	int tabSelected = 0;
 	auto tabToggle = ftxui::Toggle(&tabNames, &tabSelected);
 
-	auto accountRenderer = ftxui::Renderer([&] 
+	auto accountRenderer = ftxui::Renderer([&]
 		{
 		std::vector<ftxui::Element> elements;
 		elements.push_back(ftxui::text(std::to_string(AccountInfoRef.AccountId)));
@@ -132,8 +145,14 @@ void DashBoard::TuiStarter()
 			double maxVolume = std::numeric_limits<double>::lowest();
 			double minVolume = std::numeric_limits<double>::max();
 
-			for (const auto& [timestamp, candle] 
-				: CandlestickStorage::Instance().GetCandles(static_cast<Interval>(intervalSelected), static_cast<Symbol>(symbolSelected)))
+	        std::map<uint64_t, Candle> candles = CandlestickStorage::Instance().GetCandles(static_cast<Interval>(intervalSelected), static_cast<Symbol>(symbolSelected));
+
+	        if (candles.empty())
+	        {
+	            return ftxui::text("No candle data yet.") | ftxui::center;
+	        }
+
+			for (const auto& [timestamp, candle] : candles)
 			{
 				maxPrice = std::max(maxPrice, candle.HighPrice);
 				minPrice = std::min(minPrice, candle.LowPrice);
@@ -141,6 +160,21 @@ void DashBoard::TuiStarter()
 				maxVolume = std::max(maxVolume, candle.BaseAssetVolume);
 				minVolume = std::min(minVolume, candle.BaseAssetVolume);
 			}
+
+	        if (minPrice == maxPrice)
+	        {
+	            const double price = maxPrice;
+	            const double margin = std::max(std::abs(price) * 0.01, 0.01);
+                minPrice = price - margin;
+                maxPrice = price + margin;
+            }
+
+	        if (minVolume == maxVolume)
+	        {
+	            const double volume = maxVolume;
+	            minVolume = volume - 1.0;
+	            maxVolume = volume + 1.0;
+	        }
 
 			// Candlestick Renderer;
 				
@@ -152,18 +186,17 @@ void DashBoard::TuiStarter()
 
 			// Candlestick Renderer;
 
-			const uint64_t totalCandlesSize = CandlestickStorage::Instance().GetCandles(static_cast<Interval>(intervalSelected), static_cast<Symbol>(symbolSelected)).size();
+			const uint64_t totalCandlesSize = candles.size();
 			const uint64_t availableWidthForCandles = screen.dimx() - 2 - 2 - 1 - priceLength.str().size() - volumeLength.str().size();
 			const uint64_t maxVisibleCandles = availableWidthForCandles / 3;
-			const uint64_t unseenCandlesCount = std::max<uint64_t>(0, totalCandlesSize - maxVisibleCandles);
+			const uint64_t unseenCandlesCount = totalCandlesSize > maxVisibleCandles ? totalCandlesSize - maxVisibleCandles : 0;
 
 			const int terminalWidth = screen.dimx() - 3;
 			const int terminalHeight = screen.dimy() - 11;
 
 			uint64_t index = 0;
 
-			for (const auto& [timestamp, candle]
-				: CandlestickStorage::Instance().GetCandles(static_cast<Interval>(intervalSelected), static_cast<Symbol>(symbolSelected)))
+			for (const auto& [timestamp, candle] : candles)
 			{
 				if (index < unseenCandlesCount)
 				{
@@ -438,7 +471,7 @@ void DashBoard::TuiStarter()
 		}
 	);
 
-	auto candlestickTab = ftxui::Container::Vertical({ buttonHandler, candlestickRenderer });
+	auto candlestickTab = ftxui::Container::Vertical({ candleStickTabButtonHandler, candlestickRenderer });
 
 	auto databaseRenderer = ftxui::Renderer([&]
 		{
@@ -476,11 +509,7 @@ void DashBoard::TuiStarter()
 		}
 	);
 
-	auto logsRenderer = ftxui::Renderer([&] 
-		{
-			return ftxui::vbox(ftxui::text("Logs coming soon!"));
-		}
-	);
+    auto logsTab = ftxui::Container::Vertical({ logsTabButtonHandler, logsViewer | ftxui::flex });
 
 	auto connectionRenderer = ftxui::Renderer([&]
 		{
@@ -546,7 +575,7 @@ void DashBoard::TuiStarter()
 
 	const ftxui::Component tabContainer = ftxui::Container::Tab(
 		{
-				accountRenderer, tradeRenderer, candlestickTab , databaseRenderer, logsRenderer, connectionRenderer
+				accountRenderer, tradeRenderer, candlestickTab , databaseRenderer, logsTab, connectionRenderer
 		},
 	&tabSelected);
 

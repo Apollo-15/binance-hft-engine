@@ -8,5 +8,5 @@
 
 namespace JsonParser
 {
-	std::optional<FullResponse> ParseFullResponse(const std::string& json, std::shared_ptr<spdlog::logger> technicalLogger);
+	std::optional<FullResponse> ParseFullResponse(const std::string& json, const std::shared_ptr<spdlog::logger>& technicalLogger);
 }

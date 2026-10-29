@@ -31,17 +31,20 @@ namespace Binance
 		Net::ssl::context& SslContext;
 
 		std::shared_ptr<spdlog::logger> TechnicalLogger;
+		std::shared_ptr<spdlog::logger> TradeLogger;
 
 	public:
 		explicit RestRequest(std::string apiKey, std::string secretKey, std::string host, std::string port,
-			Net::io_context& ioContext, Net::ssl::context& sslContext, std::shared_ptr<spdlog::logger> technicalLogger)
+			Net::io_context& ioContext, Net::ssl::context& sslContext, std::shared_ptr<spdlog::logger> technicalLogger,
+			std::shared_ptr<spdlog::logger> tradeLogger)
 			: ApiKey(std::move(apiKey)),
 			  SecretKey(std::move(secretKey)),
 			  Host(std::move(host)),
 			  Port(std::move(port)),
 			  IoContext(ioContext),
 			  SslContext(sslContext),
-			  TechnicalLogger(std::move(technicalLogger))
+			  TechnicalLogger(std::move(technicalLogger)),
+			  TradeLogger(std::move(tradeLogger))
 		{
 		}
 

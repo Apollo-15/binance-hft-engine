@@ -13,6 +13,10 @@ file(GLOB_RECURSE SOURCES
 
 add_executable(binance_hft ${SOURCES}
         binance_hft/src/logger/logger_manager.cpp
+        binance_hft/include/logger/reader/logger_reader.hpp
+        binance_hft/src/logger/reader/logger_reader.cpp
+        binance_hft/include/tui/widgets/logs_viewer.hpp
+        binance_hft/src/tui/widgets/logs_viewer.cpp
 )
 
 target_include_directories(binance_hft PRIVATE

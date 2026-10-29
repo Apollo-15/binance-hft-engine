@@ -22,6 +22,8 @@ void Binance::ReconnectManager::StartReconnect()
 	}
 
 	IsReconnecting = true;
+	TechnicalLogger->warn("[Reconnect Manager] Reconnecting Started...");
+
 	const int64_t baseSeconds = BConfig.BaseDelay.count();
 	const double multiplier = std::pow(2, ExponentialBackoff);
 	const double rawSeconds = multiplier * static_cast<double>(baseSeconds);
