@@ -367,3 +367,6 @@ FodyWeavers.xsd
 
 # 
 /binance_hft/portfolio.db
+
+logs/*
+!logs/.gitkeep

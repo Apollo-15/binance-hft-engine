@@ -9,6 +9,7 @@
 #include "portfolio/portfolio.hpp"
 #include "strategy/trading_strategy.hpp"
 #include "database/database.hpp"
+#include "logger/logger_manager.hpp"
 #include "market/candlestick_websocket_path_builder.hpp"
 #include "market/historical_candlestick_loader.hpp"
 #include "network/candlestick_websocket_client.hpp"
@@ -43,56 +44,61 @@ int main()
 	TransactionData transactionData;
 	std::array<std::shared_ptr<Binance::ReconnectManager>, static_cast<size_t>(Symbol::FinalBorder)> candlestickReconnectManager;
 
+    std::string tradeLogsPath = "logs/tradeLogs.log";
+    std::string technicalLogsPath = "logs/technicalLogs.log";
+	LoggerManager loggerManager(tradeLogsPath, false, technicalLogsPath, true);
+    LoggerReader tradeLoggerReader(tradeLogsPath, 1000, loggerManager.GetTechnicalLogger());
+    LoggerReader technicalLoggerReader(technicalLogsPath, 1000, loggerManager.GetTechnicalLogger());
+    tradeLoggerReader.Start();
+    technicalLoggerReader.Start();
+
 	const unsigned int availableThreads = std::thread::hardware_concurrency();
 	const unsigned int threadPoolSize = availableThreads == 0 ? 4 : std::min(availableThreads, 4u);
-	
+
 	transactionData.Symbol = "BTCUSDT";
 	transactionData.Side = "BUY";
 	transactionData.Type = "MARKET";
 	transactionData.Quantity = 0.001;
 
-	auto binanceConfig = Binance::ReadConfig("include/config/config_private.json");
+	auto binanceConfig = Binance::ReadConfig("binance_hft/include/config/config_private.json", loggerManager.GetTechnicalLogger());
 
     auto client = std::make_shared<Binance::WebSocketClient>(
 		binanceConfig.WsHost,
 		binanceConfig.WsPort,
         ioContext,
         sslContext,
-        queue
+        queue,
+        loggerManager.GetTechnicalLogger()
         );
-
-	/*auto candlestickClient = std::make_shared<CandlestickWebSocketClient>(
-		binanceConfig, 
-		sslContext
-		);*/
 
 	std::array<std::shared_ptr<CandlestickWebSocketClient>, static_cast<size_t>(Symbol::FinalBorder)> candlestickClient;
 
 	for	(int i = 0; i < static_cast<int>(Symbol::FinalBorder); i++)
 	{
-		Symbol currentSymbol = static_cast<Symbol>(i);
+		auto currentSymbol = static_cast<Symbol>(i);
 
 		Binance::BinanceConfig symbolConfig = binanceConfig;
 		symbolConfig.CWsPath = BuildCandlestickWebSocketPath(currentSymbol);
 
-		candlestickClient[i] = std::make_shared<CandlestickWebSocketClient>(symbolConfig, ioContext, sslContext, currentSymbol);
-		candlestickReconnectManager[i] = std::make_shared<Binance::ReconnectManager>(candlestickClient[i], ioContext, symbolConfig);
+		candlestickClient[i] = std::make_shared<CandlestickWebSocketClient>(symbolConfig, ioContext, sslContext, currentSymbol, loggerManager.GetTechnicalLogger());
+		candlestickReconnectManager[i] = std::make_shared<Binance::ReconnectManager>(candlestickClient[i], ioContext, symbolConfig, loggerManager.GetTechnicalLogger());
 
 		candlestickClient[i]->SetManager(candlestickReconnectManager[i]);
 		candlestickClient[i]->Connect();
 	}
 
-	Binance::RestRequest newRequest(binanceConfig.ApiKey, binanceConfig.SecretKey, binanceConfig.TestnetRestHost, 
-		binanceConfig.RestPort, ioContext, sslContext);
+	Binance::RestRequest newRequest(binanceConfig.ApiKey, binanceConfig.SecretKey, binanceConfig.TestnetRestHost,
+		binanceConfig.RestPort, ioContext, sslContext, loggerManager.GetTechnicalLogger(), loggerManager.GetTradeLogger());
 
 	LatencyManager latencyManager(newRequest, binanceConfig.RestHost);
 
 	AccountInfo accountInfo = newRequest.FetchAccountInfo();
 
-	LoadAllHistoricalCandlesticks(newRequest, binanceConfig.RestHost);
+    HistoricalCandlestickLoader historicalCandlestickLoader(newRequest, binanceConfig.RestHost);
+    historicalCandlestickLoader.Start();
 
-    auto reconnectManager = std::make_shared<Binance::ReconnectManager>(client, ioContext, binanceConfig);
-	
+    auto reconnectManager = std::make_shared<Binance::ReconnectManager>(client, ioContext, binanceConfig, loggerManager.GetTechnicalLogger());
+
 	client->SetManager(reconnectManager);
 	client->Connect();
 
@@ -102,9 +108,11 @@ int main()
     db.CreateTradesTable();
 
 	internetManager.Connect();
+
 	latencyManager.StartMeasuringLatency();
 
-    DashBoard dashBoard(Portfolio::Instance(12), db, tradeBuffer, accountInfo, client, internetManager, latencyManager, candlestickClient);
+    DashBoard dashBoard(Portfolio::Instance(12), db, tradeBuffer, accountInfo, client, internetManager,
+        latencyManager, candlestickClient, tradeLoggerReader, technicalLoggerReader, loggerManager.GetTechnicalLogger());
 
     auto localGuard = Net::make_work_guard(ioContext);
     workGuard = &localGuard;
@@ -122,8 +130,8 @@ int main()
 		);
     }
 
-    std::thread portfolioThread([](TradeQueue<TradeEvent>& queue, std::atomic<bool>& bIsRunning, 
-        TradeQueue<TradeEvent>& dbTradeQueue, TradeQueue<TradeBatch>& dbBatchQueue, TradeBuffer& tradeBuffer)
+    std::thread portfolioThread([](TradeQueue<TradeEvent>& queue, const std::atomic<bool>& bIsRunning,
+        TradeQueue<TradeEvent>& dbTradeQueue, TradeQueue<TradeBatch>& dbBatchQueue, TradeBuffer& tradeBuffer, std::shared_ptr<spdlog::logger> tradeLogger)
 	    {
 	        TradeEvent event;
 	        auto& portfolio = Portfolio::Instance(50000.0);
@@ -144,11 +152,15 @@ int main()
 		                portfolio.UpdatePosition(newPosition);
 
 	                    bool isNewBatch = strategy.ProcessTrades(event);
-	                    
+
 	                    if (isNewBatch)
 	                    {
 	                        strategy.GetBack().BatchId = batchCounter++;
 	                        dbBatchQueue.Push(strategy.GetBack());
+
+	                    	tradeLogger->info("[BATCH_OPENED] BatchId={} | Symbol={} | Price={} | Quantity={} | Position={} | TradeTime={} | TradeId={}",
+	                    			strategy.GetBack().BatchId, event.Symbol, event.Price, event.Quantity, portfolio.GetPosition(), event.TradeTime, event.TradeId
+	                    		);
 	                    }
 
 		                if (std::optional<TradeBatch> savedBatch = strategy.ShouldSell(event.Price))
@@ -160,13 +172,16 @@ int main()
 	                        portfolio.UpdatePosition(finalPosition);
 
 	                        savedBatch->PnL = (finalBalance - newBalance) / newBalance * 100;
-	                        savedBatch->BatchId = batchCounter++;
 
 	                        dbBatchQueue.Push(*savedBatch);
+
+		                	tradeLogger->info("[BATCH_CLOSED] BatchId={} | Symbol={} | Price={} | Quantity={} | Position={} | PnL={} | TradeTime={} | TradeId={}",
+		                			savedBatch->BatchId, event.Symbol, event.Price, event.Quantity, portfolio.GetPosition(), savedBatch->PnL, event.TradeTime, event.TradeId
+		                		);
 		                }
 	                    dbTradeQueue.Push(event);
 						tradeBuffer.AddTrade(event);
-						
+
 						if (ftxui::ScreenInteractive::Active() != nullptr)
 						{
 							ftxui::ScreenInteractive::Active()->RequestAnimationFrame();
@@ -178,11 +193,11 @@ int main()
 	                std::this_thread::yield();
 	            }
 		    }
-	    }, 
-		std::ref(queue), std::ref(bIsRunning), std::ref(dbTradeQueue), std::ref(dbBatchQueue), std::ref(tradeBuffer)
+	    },
+		std::ref(queue), std::ref(bIsRunning), std::ref(dbTradeQueue), std::ref(dbBatchQueue), std::ref(tradeBuffer), loggerManager.GetTradeLogger()
 	);
 
-    std::thread dbThread([](std::atomic<bool>& bIsRunning, TradeQueue<TradeEvent>& dbTradeQueue, 
+    std::thread dbThread([](const std::atomic<bool>& bIsRunning, TradeQueue<TradeEvent>& dbTradeQueue,
         TradeQueue<TradeBatch>& dbBatchQueue, DataBase& db)
 	    {
 	        TradeEvent event;
@@ -201,7 +216,7 @@ int main()
 	                db.SaveBatch(batch);
 	            }
 	        }
-	    }, 
+	    },
         std::ref(bIsRunning), std::ref(dbTradeQueue), std::ref(dbBatchQueue), std::ref(db)
     );
 

@@ -9,6 +9,7 @@
 #include <boost/beast/websocket/stream.hpp>
 #include <boost/beast/core/tcp_stream.hpp>
 #include <boost/beast/core.hpp>
+#include <spdlog/logger.h>
 
 #include "iwebsocket_client.hpp"
 #include "models/trade_event.hpp"
@@ -47,6 +48,8 @@ namespace Binance
 
 		std::weak_ptr<ReconnectManager> Manager;
 
+		std::shared_ptr<spdlog::logger> TechnicalLogger;
+
 	public:
 		void Connect() override;
 		void Close();
@@ -63,14 +66,15 @@ namespace Binance
 		void SetManager(const std::weak_ptr<ReconnectManager>& manager);
 
 		explicit WebSocketClient(std::string host, std::string port, Net::io_context& ioContext, Net::ssl::context& sslContext,
-			TradeQueue<TradeEvent>& event)
+			TradeQueue<TradeEvent>& event, std::shared_ptr<spdlog::logger> technicalLogger)
 			: Host(std::move(host)),
 			  Port(std::move(port)),
 			  IoContext(ioContext),
 			  SslContext(sslContext),
 			  Resolver(ioContext),
 			  WebSocket(std::make_unique<WebSocket::stream<Beast::ssl_stream<Beast::tcp_stream>>>(ioContext, sslContext)),
-			  Event(event)
+			  Event(event),
+			  TechnicalLogger(std::move(technicalLogger))
 		{
 		}
 	};

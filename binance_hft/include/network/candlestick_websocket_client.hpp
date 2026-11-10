@@ -5,10 +5,11 @@
 #include <boost/beast/ssl.hpp>
 #include <boost/beast/websocket/stream.hpp>
 #include <boost/beast/core/tcp_stream.hpp>
-#include <../include/simdjson.h>
+#include <simdjson.h>
 #include <thread>
 #include <memory>
 #include <atomic>
+#include <spdlog/logger.h>
 
 #include "boost/asio/steady_timer.hpp"
 #include "config/binance_config.hpp"
@@ -36,7 +37,7 @@ private:
 	Beast::flat_buffer Buffer;
 	std::unique_ptr<WebSocket::stream<Beast::ssl_stream<Beast::tcp_stream>>> WebSocket;
 	OnDemand::parser Parser;
-	std::thread IoThread;
+	// std::thread IoThread;
 	std::atomic<ConnectionStatus> CurrentStatus { ConnectionStatus::Disconnected };
 	std::string ErrorMessage;
 	mutable std::mutex Mutex;
@@ -51,8 +52,11 @@ private:
 
 	void ReadMessage();
 
+	std::shared_ptr<spdlog::logger> TechnicalLogger;
+
 public:
-	explicit CandlestickWebSocketClient(Binance::BinanceConfig bConfig, Net::io_context& ioContext, Net::ssl::context& sslContext, const Symbol ownSymbol)
+	explicit CandlestickWebSocketClient(Binance::BinanceConfig bConfig, Net::io_context& ioContext, Net::ssl::context& sslContext,
+		const Symbol ownSymbol, std::shared_ptr<spdlog::logger> technicalLogger)
 		: IoContext(ioContext),
 		  SslContext(sslContext),
 		  Resolver(IoContext),
@@ -62,7 +66,8 @@ public:
 	      IsReconnecting(false),
 	      ExponentialBackoff(0),
 	      BConfig(std::move(bConfig)),
-		  OwnSymbol(ownSymbol)
+		  OwnSymbol(ownSymbol),
+		  TechnicalLogger(std::move(technicalLogger))
 	{
 	}
 

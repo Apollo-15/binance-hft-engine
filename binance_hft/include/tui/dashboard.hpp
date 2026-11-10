@@ -9,6 +9,7 @@
 #include "network/latency_manager.hpp"
 #include "portfolio/portfolio.hpp"
 #include "trading/trade_buffer.hpp"
+#include "logger/reader/logger_reader.hpp"
 
 class DashBoard
 {
@@ -21,13 +22,16 @@ private:
 	InternetManager& InternetManagerRef;
 	LatencyManager& LatencyManagerRef;
 	std::array<std::shared_ptr<CandlestickWebSocketClient>, static_cast<size_t>(Symbol::FinalBorder)>& CandlestickClientRef;
+    LoggerReader& TradeLoggerReaderRef;
+    LoggerReader& TechnicalLoggerReaderRef;
+    std::shared_ptr<spdlog::logger> TechnicalLogger;
 
 public:
 
 	explicit DashBoard(Portfolio& portfolioRef, DataBase& dataBaseRef, TradeBuffer& tradeBufferRef, AccountInfo& accountInfoRef,
 		std::shared_ptr<Binance::WebSocketClient>& clientRef, InternetManager& internetManagerRef, LatencyManager& latencyManagerRef,
-		std::array<std::shared_ptr<CandlestickWebSocketClient>, static_cast<size_t>(Symbol::FinalBorder)>&
-		candlestickClientRef)
+		std::array<std::shared_ptr<CandlestickWebSocketClient>, static_cast<size_t>(Symbol::FinalBorder)>& candlestickClientRef,
+		LoggerReader& tradeLoggerReaderRef, LoggerReader& technicalLoggerReaderRef, std::shared_ptr<spdlog::logger> technicalLogger)
 		: PortfolioRef(portfolioRef),
 		  DataBaseRef(dataBaseRef),
 		  TradeBufferRef(tradeBufferRef),
@@ -35,7 +39,10 @@ public:
 		  ClientRef(clientRef),
 		  InternetManagerRef(internetManagerRef),
 		  LatencyManagerRef(latencyManagerRef),
-		  CandlestickClientRef(candlestickClientRef)
+		  CandlestickClientRef(candlestickClientRef),
+          TradeLoggerReaderRef(tradeLoggerReaderRef),
+          TechnicalLoggerReaderRef(technicalLoggerReaderRef),
+          TechnicalLogger(std::move(technicalLogger))
 	{
 	}
 

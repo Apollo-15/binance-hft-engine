@@ -2,7 +2,10 @@
 
 #include <boost/beast/core/buffers_to_string.hpp>
 #include <ftxui/component/screen_interactive.hpp>
+
+#ifdef _WIN32
 #include <debugapi.h>
+#endif
 
 #include "market/candlestick_storage.hpp"
 #include "market/candlestick_websocket_path_builder.hpp"
@@ -11,11 +14,6 @@
 void CandlestickWebSocketClient::Connect()
 {
 	CurrentStatus = ConnectionStatus::Connecting;
-
-	if (IoThread.joinable() && IoContext.stopped())
-	{
-		IoContext.restart();
-	}
 
 	Resolver.async_resolve(
 		BConfig.WsHost,
@@ -28,7 +26,8 @@ void CandlestickWebSocketClient::Connect()
 			if (ec)
 			{
 				self->CurrentStatus = ConnectionStatus::Error;
-				self->SetErrorMessage("Resolve error: " + ec.message());
+				self->SetErrorMessage("A Resolver Error Occurred: " + ec.message());
+				self->TechnicalLogger->error("[Candlestick WebSocket Client] A Resolver Error Occurred: {}", ec.message());
 
 				auto lockedManager = self->Manager.lock();
 
@@ -53,7 +52,8 @@ void CandlestickWebSocketClient::Connect()
 					if (ec)
 					{
 						self->CurrentStatus = ConnectionStatus::Error;
-						self->SetErrorMessage("Connection error: " + ec.message());
+						self->SetErrorMessage("A Connection Error Occurred: " + ec.message());
+						self->TechnicalLogger->error("[Candlestick WebSocket Client] A Connection Error Occurred: {}", ec.message());
 
 						auto lockedManager = self->Manager.lock();
 
@@ -76,7 +76,8 @@ void CandlestickWebSocketClient::Connect()
 							if (ec)
 							{
 								self->CurrentStatus = ConnectionStatus::Error;
-								self->SetErrorMessage("SSL Handshake error: " + ec.message());
+								self->SetErrorMessage("A SSL Handshake Error Occurred: " + ec.message());
+								self->TechnicalLogger->error("[Candlestick WebSocket Client] A SSL Handshake Error Occurred: {}", ec.message());
 
 								auto lockedManager = self->Manager.lock();
 
@@ -92,6 +93,12 @@ void CandlestickWebSocketClient::Connect()
 
 							Beast::get_lowest_layer(*self->WebSocket).expires_never();
 
+						    WebSocket::stream_base::timeout timeoutOptions;
+                            timeoutOptions.handshake_timeout = std::chrono::seconds(15);
+                            timeoutOptions.idle_timeout = std::chrono::seconds(30);
+                            timeoutOptions.keep_alive_pings = true;
+						    self->WebSocket->set_option(timeoutOptions);
+
 							self->WebSocket->async_handshake(
 								self->BConfig.WsHost,
 								self->BConfig.CWsPath,
@@ -102,7 +109,8 @@ void CandlestickWebSocketClient::Connect()
 									if (ec)
 									{
 										self->CurrentStatus = ConnectionStatus::Error;
-										self->SetErrorMessage("Candlestick Handshake error: " + ec.message());
+										self->SetErrorMessage("A Candlestick Handshake Error Occurred: " + ec.message());
+										self->TechnicalLogger->error("[Candlestick WebSocket Client] A Candlestick Handshake Error Occurred: {}", ec.message());
 
 										auto lockedManager = self->Manager.lock();
 
@@ -118,6 +126,7 @@ void CandlestickWebSocketClient::Connect()
 
 									self->SetErrorMessage("");
 									self->CurrentStatus = ConnectionStatus::Connected;
+									self->TechnicalLogger->info("[Candlestick WebSocket Client] Connection Established.");
 
 									self->ReadMessage();
 								}
@@ -128,12 +137,6 @@ void CandlestickWebSocketClient::Connect()
 			);
 		}
 	);
-
-
-	if (!IoThread.joinable())
-	{
-		IoThread = std::thread([this] { IoContext.run(); });
-	}
 }
 
 void CandlestickWebSocketClient::Close()
@@ -146,17 +149,20 @@ void CandlestickWebSocketClient::Close()
 		{
 			if (ec && ec != boost::asio::ssl::error::stream_truncated && ec != boost::asio::error::operation_aborted)
 			{
-				self->SetErrorMessage("Candlestick Close Error: " + ec.message());
+				self->SetErrorMessage("A Candlestick Close Error Occurred: " + ec.message());
+				self->TechnicalLogger->error("[Candlestick WebSocket Client] A Candlestick Close Error Occurred: {}", ec.message());
 
 				return;
 			}
 
 			self->CurrentStatus = ConnectionStatus::Closed;
-			// TODO: move to Logs tab via spdlog once technical logging is implemented
-			std::cout << "Connection closed!" << '\n';
+
+			self->TechnicalLogger->info("[Candlestick WebSocket] Connection closed.");
 
 			self->BConfig.CWsPath = BuildCandlestickWebSocketPath(self->OwnSymbol);
-			OutputDebugStringA((self->BConfig.CWsPath + "\n").c_str());
+
+			self->TechnicalLogger->debug("[Candlestick WebSocket] Path: {}", self->BConfig.CWsPath);
+
 			self->Reset();
 			self->Connect();
 		}
@@ -177,7 +183,8 @@ void CandlestickWebSocketClient::ReadMessage()
 			{
 				if (ec != boost::asio::error::operation_aborted)
 				{
-					self->SetErrorMessage("Candlestick Reading error: " + ec.message());
+					self->SetErrorMessage("A Candlestick Reading Error Occurred: " + ec.message());
+					self->TechnicalLogger->error("[Candlestick WebSocket Client] A Candlestick Read Error Occurred: {}", ec.message());
 
 					auto lockedManager = self->Manager.lock();
 
@@ -197,7 +204,7 @@ void CandlestickWebSocketClient::ReadMessage()
 
 			self->Buffer.consume(self->Buffer.size());
 
-			const auto parsedData = JsonParser::ParseCandlestick(message);
+			const auto parsedData = JsonParser::ParseCandlestick(message, self->TechnicalLogger);
 			if (parsedData)
 			{
 				CandlestickStorage::Instance().Upsert(parsedData->Interval, self->OwnSymbol, *parsedData);

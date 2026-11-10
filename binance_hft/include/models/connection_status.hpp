@@ -37,8 +37,7 @@ inline std::string ConnectionStatusToDisplayString(const ConnectionStatus connec
 		case ConnectionStatus::Reconnecting:
 			return "Reconnecting in progress...";
 	}
-
-	__assume(false);
+	std::unreachable();
 }
 
 struct ConnectionData
@@ -65,6 +64,5 @@ inline ftxui::Color ConnectionStatusToColor(const ConnectionStatus connectionSta
 		case ConnectionStatus::Reconnecting:
 			return ftxui::Color::Orange1;
 	}
-
-	__assume(false);
+	std::unreachable();
 }

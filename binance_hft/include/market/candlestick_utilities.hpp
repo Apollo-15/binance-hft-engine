@@ -1,6 +1,7 @@
 #pragma once
 
 #include <string_view>
+#include <utility>
 
 enum class Interval
 {
@@ -68,7 +69,7 @@ inline std::string_view IntervalToString(const Interval interval)
 		case Interval::FinalBorder:
 			return "";
 	}
-	__assume(false);
+	std::unreachable();
 }
 
 inline std::string_view IntervalToDisplayString(const Interval interval)
@@ -116,7 +117,7 @@ inline std::string_view IntervalToDisplayString(const Interval interval)
 	case Interval::FinalBorder:
 		return "";
 	}
-	__assume(false);
+	std::unreachable();
 }
 
 inline Interval IntervalFromString(const std::string_view stringView)
@@ -186,5 +187,5 @@ inline Interval IntervalFromString(const std::string_view stringView)
 		return Interval::Mon1;
 	}
 
-	__assume(false);
+	std::unreachable();
 }

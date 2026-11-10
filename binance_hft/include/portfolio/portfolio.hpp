@@ -6,7 +6,7 @@ class Portfolio
 {
 private:
 	mutable std::mutex Mutex;
-	double Balance = 50000.0;
+	double Balance = 5000000.0;
 	double PnL = 0.0;
 	double Position = 0.0;
 

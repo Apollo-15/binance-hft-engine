@@ -2,6 +2,7 @@
 
 #include <cstdint>
 #include <string_view>
+#include <utility>
 
 enum class Symbol : std::uint8_t
 {
@@ -33,7 +34,7 @@ inline std::string_view SymbolToString(const Symbol symbol)
 
 	}
 
-	__assume(false);
+	std::unreachable();
 }
 
 inline std::string_view SymbolToDisplayString(const Symbol symbol)
@@ -55,7 +56,7 @@ inline std::string_view SymbolToDisplayString(const Symbol symbol)
 			return "";
 	}
 
-	__assume(false);
+	std::unreachable();
 }
 
 inline Symbol SymbolFromString(const std::string_view stringView)
@@ -81,5 +82,5 @@ inline Symbol SymbolFromString(const std::string_view stringView)
 		return Symbol::Bnb;
 	}
 
-	__assume(false);
+	std::unreachable();
 }

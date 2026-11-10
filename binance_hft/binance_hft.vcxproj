@@ -106,7 +106,7 @@
       </UndefinePreprocessorDefinitions>
       <AdditionalIncludeDirectories>$(ProjectDir)include</AdditionalIncludeDirectories>
       <LanguageStandard>stdcpp20</LanguageStandard>
-      <AdditionalOptions>/bigobj %(AdditionalOptions)</AdditionalOptions>
+      <AdditionalOptions>/bigobj /utf-8 %(AdditionalOptions)</AdditionalOptions>
     </ClCompile>
     <Link>
       <SubSystem>Console</SubSystem>
@@ -126,7 +126,7 @@
       </UndefinePreprocessorDefinitions>
       <AdditionalIncludeDirectories>$(ProjectDir)include</AdditionalIncludeDirectories>
       <LanguageStandard>stdcpp20</LanguageStandard>
-      <AdditionalOptions>/bigobj %(AdditionalOptions)</AdditionalOptions>
+      <AdditionalOptions>/bigobj /utf-8 %(AdditionalOptions)</AdditionalOptions>
     </ClCompile>
     <Link>
       <SubSystem>Console</SubSystem>
@@ -161,6 +161,7 @@
     <ClInclude Include="include\config\binance_config.hpp" />
     <ClInclude Include="include\config\config_reader.hpp" />
     <ClInclude Include="include\database\database.hpp" />
+    <ClInclude Include="include\logger\logger_manager.hpp" />
     <ClInclude Include="include\market\candlestick_storage.hpp" />
     <ClInclude Include="include\market\candlestick_utilities.hpp" />
     <ClInclude Include="include\market\candlestick_websocket_path_builder.hpp" />
@@ -201,6 +202,7 @@
     <None Include="..\README.md" />
     <None Include="include\config\config.json" />
     <None Include="include\config\config_private.json" />
+    <None Include="logs\.gitkeep" />
   </ItemGroup>
   <Import Project="$(VCTargetsPath)\Microsoft.Cpp.targets" />
   <ImportGroup Label="ExtensionTargets">

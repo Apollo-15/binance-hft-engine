@@ -37,7 +37,7 @@ std::optional<TradeBatch> TradingStrategy::ShouldSell(double currentPrice)
 	{
 		if (batch.IsSold == false)
 		{
-			if (currentPrice > batch.Trades.front().Price * 1.002) // change to 1.0001 for test
+			if (currentPrice > batch.Trades.front().Price * 1.0001) // change to 1.0001 for test
 			{
 				batch.IsSold = true;
 				return batch;
